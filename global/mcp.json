@@ -1,0 +1,14 @@
+{
+	"servers": {
+		"apigee trial": {
+			"type": "stdio",
+			"command": "npm",
+			"args": [
+				"run",
+				"server:dev"
+			],
+			"cwd": "D:\\vs-code-agentic-trial"
+		}
+	},
+	"inputs": []
+}

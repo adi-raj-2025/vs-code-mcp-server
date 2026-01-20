@@ -1,0 +1,13 @@
+{
+	"servers": {
+		"apigee trial server": {
+			"type": "stdio",
+			"command": "npm",
+			"args": [
+				"run",
+				"server:dev"
+			]
+		}
+	},
+	"inputs": []
+}
