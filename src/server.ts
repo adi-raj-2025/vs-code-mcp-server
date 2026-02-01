@@ -94,16 +94,13 @@ server.registerTool("add-jasmine-dependency",
 
 server.registerPrompt("automate-test-case",
   {
-    description: "Generate and analyze code coverage report for Apigee project",
-    argsSchema: {
-      path: z.string().optional().describe("Absolute path to the Apigee local repository"),
-      command: z.string().optional().describe("Command to run")
-    }
+    description: "Generate and analyze code coverage report for Apigee project"
+    // Remove the argsSchema since we're loading from config
   },
   async (params) => {
     const config = loadConfig();
-    const effectivePath = params.path || config.path;
-    const effectiveCommand = params.command || config.command;
+    const effectivePath = config.path;
+    const effectiveCommand = config.command;
 
     if (!effectivePath || !effectiveCommand) {
       return {
@@ -118,85 +115,48 @@ Please use #add-jasmine-dependency tool to save the configuration.`
       };
     }
 
+    // Escape backslashes for the path in the command
+    const escapedPath = effectivePath.replace(/\\/g, '\\\\');
+    
     return {
       messages: [{
         role: "user",
         content: {
           type: "text",
-          text: `
-Follow the below steps strictly without skipping any steps.
+          text: `I need to run automated test case generation with code coverage analysis.
 
-**Configuration**
+**Configuration:**
 - Path: ${effectivePath}
 - Command: ${effectiveCommand}
 
----
+**CRITICAL: THIS IS A POWERSHELL COMMAND - DO NOT CHANGE THE SYNTAX**
 
-### Step 1: Navigate to project directory and run generate report command
-Use #runInTerminal:
-\`\`\`
-cd "${effectivePath}; & "${effectiveCommand}"
-\`\`\`
+**Instructions:**
+1. FIRST: Run the coverage command in terminal using #runInTerminal with this EXACT PowerShell command:
+   \`cd "${escapedPath}"; & ${effectiveCommand}\`
 
----
+   **DO NOT** change \`; &\` to \`&&\` or any other syntax. This is correct for Windows PowerShell.
 
-### Step 2: Analyze coverage report
-Now analyze the coverage report calling existing mcp resource analyze-apigee-report whose url:- reports://all -> strictly follow this.
+2. AFTER the command completes, analyze the report using the #analyze-apigee-report resource.
 
-**Analysis rules:**
-- Identify unit test file:  
-  \`<ActualJavascriptFileName>Spec.js\`
-- Extract \`ActualJavascriptFileName\`
-- Analyze only this source file:
-  \`./jsc/<ActualJavascriptFileName>/<ActualJavascriptFileName>.js\`
+3. Based on analysis:
+   - Identify uncovered lines/functions/branches
+   - Add or modify test cases in the corresponding Spec.js file
+   - Ensure no syntax errors are introduced
 
-Strictly Follow the below format for analysis and printing summary:  
-**Generate and print a short summary with:** 
-- Total test cases executed
-- Statements coverage %
-- Branch coverage %
-- Function coverage %
-- Functionality coverage (based on covered functions)
-- List of uncovered:
-  - Lines
-  - Functions
-  - Branches
+4. After modifying tests, run the coverage command again (same as step 1 - EXACT same syntax)
 
-Ignore coverage data of all other files.
+5. Analyze new report and check if coverage is 100%
 
-### Step 3. **Add/Modify test cases**:
-   - On the basis of your analysis of test cases, add new test cases for uncovered functionality
-   - Also make sure that adding new test cases does not break existing functionality or should not throw syntax errors
-   - Modify existing tests if they don't adequately cover certain paths
+6. If not 100%, repeat steps 3-5 until full coverage is achieved
+   If 100% coverage is achieved, provide final summary and stop.
 
-### Step 4. : Navigate to project directory and run generate report command  again
-    Use #runInTerminal:
-    \`\`\`
-    cd "${effectivePath}; & "${effectiveCommand}"
-    \`\`\`
-
-### Step 5. **Analyze the new report** (reports://all again):
-   - Check if coverage improved
-   - Identify remaining uncovered elements
-
-### Step 6.
-
-**IF CODE COVERAGE IS 100%:**
-- Provide final summary showing all metrics at 100%
-- Confirm all lines, functions, and branches are covered
-- Provide recommendations for maintaining coverage
-
-**Important Notes:**
-- Make incremental changes to test files
-- Test each modification by running the coverage command
-- Focus on meaningful tests that verify actual functionality
-- Document what was added/modified in each iteration
-
-**STOP HERE IF 100% COVERAGE IS ACHIEVED**
-
-### ELSE (IF CODE COVERAGE IS NOT 100%):
-- Go back to **Step 3** and repeat the process until full coverage is achieved.
-`
+**Important:**
+- Only run the coverage command once per iteration
+- Do not attempt to fix or re-run the command syntax - the \`; &\` syntax is correct
+- Focus on analyzing the report and improving test coverage
+- Track progress between iterations
+- The command uses Windows PowerShell \`; &\` syntax which is different from bash's \`&&\``
         }
       }]
     };
