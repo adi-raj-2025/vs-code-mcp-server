@@ -7,7 +7,6 @@ addContentLanguageHeader = function addContentLanguageHeader() {
     if(!contentLanguage) {
         context.setVariable("message.header.Content-Language", defaultContentLanguage);
     }
-
     if(status == 200){
         res = "Success";
     }
