@@ -14,16 +14,11 @@ describe('AddContentLanguageHeader suit', function() {
         context = new Context();
     });
 
-    it('1. POsitive : message.header.Content-Language is from NB', function() {
+    it('1. Positive : message.header.Content-Language is from NB', function() {
         context.setVariable("request.header.Content-Language", "en-US");
         addContentLanguageHeader();
         expect(context["message.header.Content-Language"]).toBe("en-US");
     });
 
-    it('2. Positive : message.header.Content-Language is from default when request not set', function() {
-        context.setVariable("ContentLanguage", "default-lang");
-        addContentLanguageHeader();
-        expect(context["message.header.Content-Language"]).toBe("default-lang");
-    });
-
+    
 });

@@ -1,0 +1,32 @@
+T01:->
+Input :
+status = 200
+Expected Output : 
+response.reason.phrase = Success
+
+
+T02:->
+Input :
+status = 401
+Expected Output : 
+response.reason.phrase = Unauthorized
+
+
+T03:->
+Input :
+status = 403
+Expected Output : 
+response.reason.phrase = Forbidden
+
+
+T05:->
+Input :
+status = 500
+Expected Output : 
+response.reason.phrase = Server Error
+
+T06:->
+Input :
+status = 502
+Expected Output : 
+response.reason.phrase = Bad Gateway

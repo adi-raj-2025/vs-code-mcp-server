@@ -413,41 +413,59 @@ apiproxy/
 
 **WORKFLOW STEPS:**
 
-**1. INITIAL COVERAGE RUN:**
+**1. IDENTIFY CURRENT COPLIOT CHAT CONTEXT FILE (CRITICAL FIRST STEP):**
+   - **LOOK AT COPLIOT CHAT:** Check which SPECIFIC {javascript_name}Spec.js file is currently open in your Copilot chat context
+   - **DECLARE THE FILE:** Explicitly state: "Current Copilot chat context file: {filename}Spec.js"
+   - **CONFIRM SINGLE FILE:** Verify you are working on ONLY ONE file
+
+**2. INITIAL COVERAGE RUN:**
    Use #runInTerminal with this EXACT PowerShell command:
    \`& ${effectiveCommand}\`
 
-**2. ANALYZE REPORT:**
+**3. ANALYZE REPORT:**
    Use #analyze-apigee-report resource
 
-**3. IDENTIFY COVERAGE GAPS:**
-   - Find JavaScript file with <100% coverage
-   - Extract file name (e.g., "AddContentLanguageHeader")
-   - Corresponding test file: {name}Spec.js
+**4. FILTER ANALYSIS TO CURRENT COPLIOT FILE ONLY:**
+   - **FOCUS ON ONE FILE:** In the coverage report, ONLY analyze the JavaScript file that corresponds to your current Copilot chat context file
+   - **EXTRACT BASE NAME:** If current file is "AddContentLanguageHeaderSpec.js", ONLY analyze "AddContentLanguageHeader.js"
+   - **CALCULATE COVERAGE:** Calculate coverage percentage ONLY for this single file
+   - **FIND UNCOVERED LINES:** Identify uncovered lines/functions/branches ONLY for this file
 
-**4. IMPROVE TEST FILE:**
-   - Only modify: resources/spec/{name}Spec.js
-   - Never modify .js source files in jsc/
-   - Add test cases for uncovered lines/branches
+**5. IMPROVE ONLY THE CURRENT COPLIOT FILE:**
+   - **MODIFY ONLY:** Only modify the {javascript_name}Spec.js file currently open in your Copilot chat
+   - **ADD TESTS:** Add test cases ONLY for uncovered lines/branches in this single file
+   - **NEVER modify:** .js source files in jsc/
+   - **DO NOT EVEN LOOK AT:** Any other Spec.js files in the folder
 
-**5. RE-RUN COVERAGE:**
-   Same command as step 1: \`& ${effectiveCommand}\`
+**6. RE-RUN COVERAGE:**
+   Same command as step 2: \`& ${effectiveCommand}\`
 
-**6. CHECK COVERAGE:**
-   - If 100%: Provide summary and STOP
-   - If <100%: Return to step 3
+**7. CHECK COVERAGE FOR CURRENT COPLIOT FILE ONLY:**
+   - **If CURRENT FILE coverage = 100%:** Provide summary for this file and STOP
+   - **If CURRENT FILE coverage < 100%:** Return to step 4 (continue improving THIS SINGLE FILE)
 
-**STRICT RULES:**
-✅ DO: Only modify files in resources/spec/
+**STRICT COPLIOT-CONTEXT RULES:**
+✅ DO: Work on ONLY the Spec.js file currently open in your Copilot chat
+✅ DO: Declare the current file name before any analysis
+✅ DO: Filter coverage analysis to ONLY the corresponding JavaScript file
 ✅ DO: Follow {javascript_name}Spec.js naming pattern  
 ✅ DO: Use PowerShell syntax: & "command"
 ❌ DON'T: Modify .js source files
-❌ DON'T: Change command syntax to bash`
+❌ DON'T: Change command syntax to bash
+❌ DON'T: Look at, analyze, or calculate coverage for ANY other files
+❌ DON'T: Modify any Spec.js files except the one in current Copilot chat
+❌ DON'T: Even mention other files in the coverage report
+
+**EXAMPLE:**
+- **Copilot chat context:** You have AddContentLanguageHeaderSpec.js open
+- **Work ONLY on:** AddContentLanguageHeader.js coverage
+- **Modify ONLY:** AddContentLanguageHeaderSpec.js
+- **IGNORE COMPLETELY:** AnotherFile.js, ThirdFile.js (even if they exist in coverage report)
+- **DECLARE:** "Current Copilot chat context file: AddContentLanguageHeaderSpec.js" BEFORE starting`
       }]
     };
   }
 );
-
 
 server.registerPrompt("automate-test-case",
   {
@@ -475,6 +493,8 @@ server.registerPrompt("automate-test-case",
           type: "text",
           text: `I need to execute the Apigee test automation workflow to achieve 100% code coverage.
 
+**CRITICAL REQUIREMENT:** You must work on ONLY ONE Spec.js file - the one currently open in your Copilot chat context.
+
 **WORKFLOW EXECUTION:**
 
 **STEP 1: AUTO-DISCOVER RESOURCES DIRECTORY**
@@ -499,32 +519,59 @@ Run that EXACT command using #runInTerminal.
 
 Now call this tool to get complete instructions: #get-apigee-workflow-instructions
 
-**STEP 4: EXECUTE THE ITERATIVE WORKFLOW**
+**STEP 4: EXECUTE THE WORKFLOW - COPLIOT CONTEXT FILE ONLY**
 
-Follow the instructions from #get-apigee-workflow-instructions exactly. This includes:
+Follow the instructions from #get-apigee-workflow-instructions exactly.
 
-**Iteration Loop:**
-1. Run coverage command: \`& ${config.command}\`
-2. Analyze results with #analyze-apigee-report
-3. If coverage < 100%:
-   - Modify only the corresponding Spec.js file
-   - Return to step 1 (run coverage command again)
-4. If coverage = 100%:
-   - Provide final summary
-   - STOP
+**MANDATORY FIRST ACTION - DECLARE CURRENT FILE:**
+**Before doing ANY analysis, you MUST declare which file is open in your Copilot chat.**
+
+**Example declaration:** "Current Copilot chat context file: AddContentLanguageHeaderSpec.js"
+
+**Single File Iteration Loop:**
+1. **DECLARE:** State which Spec.js file is open in your Copilot chat
+2. Run coverage command: \`& ${config.command}\`
+3. Analyze results with #analyze-apigee-report
+4. **FILTER TO ONE FILE:** In the coverage report, ONLY look at the JavaScript file that matches your declared Copilot file
+5. **CALCULATE FOR ONE FILE:** Calculate coverage percentage ONLY for this single file
+6. **STRICTLY IGNORE OTHERS:** DO NOT even read coverage data for any other files
+7. If THIS SINGLE FILE coverage < 100%:
+   - Modify ONLY the Spec.js file you declared
+   - **DO NOT EVEN OPEN** any other Spec.js files
+   - Return to step 2 (run coverage command again)
+8. If THIS SINGLE FILE coverage = 100%:
+   - Provide summary for this specific file only
+   - Workflow for this file is COMPLETE
 
 **Important Notes:**
 - The auto-discovery tool finds the path dynamically for your current project
 - The \`cd\` command only needs to be run ONCE at the beginning
-- After that, the iterative process uses ONLY the coverage command: \`& ${config.command}\`
-- Each iteration re-runs the coverage command, analyzes, and improves tests
-- Continue looping until 100% coverage is achieved
+- **STRICT SINGLE-FILE:** Work on ONLY ONE file - the one in your Copilot chat
+- **NO MULTI-FILE:** Never analyze or modify multiple files
+- **IGNORE OTHERS COMPLETELY:** Pretend other files don't exist in the coverage report
+- Continue looping until the SINGLE Copilot context file reaches 100% coverage
 
-**CRITICAL RULES:**
-- Only modify {javascript_name}Spec.js files in spec/ directory
-- Never modify .js source files
-- Use exact PowerShell syntax as shown command: \`& ${config.command}\`
-- The terminal remembers the working directory after the initial \`cd\` command`
+**CRITICAL COPLIOT-CONTEXT RULES:**
+- **WORK ON ONE FILE ONLY:** The Spec.js file currently open in your Copilot chat
+- **DECLARE FIRST:** Always declare the file name before analysis
+- **FILTER ANALYSIS:** Only analyze the corresponding .js file in coverage report
+- **NEVER modify** .js source files
+- **DO NOT EVEN MENTION** other files in the coverage report
+- Use exact PowerShell syntax: \`& ${config.command}\`
+
+**EXAMPLE WORKFLOW:**
+1. **You have open:** AddContentLanguageHeaderSpec.js in Copilot chat
+2. **Declare:** "Current Copilot chat context file: AddContentLanguageHeaderSpec.js"
+3. **Run coverage** → Get report with multiple files
+4. **Only analyze:** AddContentLanguageHeader.js data
+5. **Ignore completely:** AnotherFile.js, ThirdFile.js (don't even read their data)
+6. **Modify only:** AddContentLanguageHeaderSpec.js
+7. **Repeat** until AddContentLanguageHeader.js = 100%
+
+**REQUIRED DECLARATION BEFORE PROCEEDING:**
+**What is the EXACT {javascript_name}Spec.js file currently open in your Copilot chat context?**
+
+**Example answer:** "Current Copilot chat context file: AddContentLanguageHeaderSpec.js"`
         }
       }]
     };
