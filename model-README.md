@@ -20,14 +20,16 @@ This MCP server manages another AI's behavior by feeding it highly restrictive, 
 
 ### The Prompts (Slash Commands)
 The entry points are the Prompts registered in `src/server.ts`:
-1. **`/1.automate-test-case`**: A single-file workflow. It forces the AI to filter its focus entirely to whatever `Spec.js` file the user currently has open.
-2. **`/2.all-automate-test-case`**: A global workflow. It forces the AI to iterate over the entire project's coverage report and fix multiple files at once.
+1. **`/CurrentjavascriptFile`**: A single-file workflow. It forces the AI to filter its focus entirely to whatever `Spec.js` file the user currently has open and loops code coverage until 100%.
+2. **`/AlljavascriptFile`**: A global workflow. It forces the AI to iterate over the entire project's coverage report and fix multiple files at once.
+3. **`/CustomjavascriptFile`**: A manual input workflow. It forces the AI to read specific test case requirements from `TestData/{name}Input.txt` and generate tests for the open `Spec.js` file, completely bypassing code coverage execution.
 
 ### The Tools
 Instead of making external API calls, these tools interact with the local file system and provide "Guardrails":
 - **`auto-discover-resources`**: Recursively searches the filesystem to find the Apigee `resources/` folder (which strictly contains `jsc/` and `spec/`). This avoids forcing the user to navigate the terminal manually.
 - **`analyze-apigee-report`**: Reads the `lcov.info` file and feeds it to the AI.
-- **`get-apigee-workflow-instructions`** & **`all-get-apigee-workflow-instructions`**: These are critical. They do not execute code. Instead, they return massive strings of markdown containing strict rules (e.g., "NEVER modify .js files", "DO NOT guess commands"). They act as injected context windows.
+- **`read-custom-test-data`**: Reads the user-provided manual test cases from the `TestData` directory for the `/CustomjavascriptFile` workflow.
+- **`get-apigee-workflow-instructions`**, **`all-get-apigee-workflow-instructions`**, & **`custom-get-apigee-workflow-instructions`**: These are critical. They do not execute code. Instead, they return massive strings of markdown containing strict rules (e.g., "NEVER modify .js files", "DO NOT guess commands"). They act as injected context windows.
 
 ---
 

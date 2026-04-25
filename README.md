@@ -13,13 +13,16 @@ This Model Context Protocol (MCP) server acts as an AI agent designed to automat
 
 ## The Workflows
 
-The server provides two primary workflows (Slash Commands/Prompts):
+The server provides three primary workflows (Slash Commands/Prompts):
 
-1. **`/1.automate-test-case` (Single File Workflow)**
+1. **`/CurrentjavascriptFile` (Single File Workflow)**
    Perfect for when you have a specific `Spec.js` file open in your editor. The AI will strictly filter its analysis and edits exclusively to that single file, ignoring the rest of the project until that file reaches 100% coverage.
 
-2. **`/2.all-automate-test-case` (Global Workflow)**
+2. **`/AlljavascriptFile` (Global Workflow)**
    The AI will ingest the entire project's coverage report and iteratively work through *every* uncovered file, adding tests to multiple files until global 100% coverage is achieved across the entire project.
+
+3. **`/CustomjavascriptFile` (Custom Input Workflow)**
+   Perfect for when you want to supply custom test scenarios instead of relying on coverage gaps. The AI will read your requirements from `resources/TestData/{your_file}Input.txt` and generate the exact tests you asked for in your currently open `Spec.js` file. This workflow does not run tests or require a coverage command.
 
 ---
 
@@ -79,9 +82,9 @@ Once saved, **restart your IDE or MCP client** so it establishes the connection 
 Using the automation is incredibly easy. Simply open your AI Chat interface and trigger the prompt.
 
 ### **Step 1: Trigger the workflow**
-Type `/1.automate-test-case` (or use your IDE's slash command menu). 
+Type `/CurrentjavascriptFile` (or use your IDE's slash command menu). 
 
-*Tip: If your IDE supports prompt arguments, you can optionally provide your coverage command directly (e.g. `/1.automate-test-case "npm test"`).*
+*Tip: If your IDE supports prompt arguments, you can optionally provide your coverage command directly (e.g. `/CurrentjavascriptFile "npm test"`).*
 
 ### **Step 2: Provide the Coverage Command**
 If you didn't provide the command in Step 1, the AI is strictly instructed to stop and ask you for it:
@@ -110,8 +113,10 @@ These are the tools the AI uses autonomously to interact with your filesystem. Y
 |---|---|
 | `#auto-discover-resources` | Recursively searches the current directory to locate the Apigee `resources` folder. |
 | `#analyze-apigee-report` | Ingests and formats the raw `lcov.info` file for AI analysis. |
+| `#read-custom-test-data` | Reads specific test cases from `resources/TestData/{name}Input.txt`. |
 | `#get-apigee-workflow-instructions` | Feeds the AI strict operational rules and guardrails for the single-file workflow. |
 | `#all-get-apigee-workflow-instructions` | Feeds the AI global operational rules and guardrails for the entire project workflow. |
+| `#custom-get-apigee-workflow-instructions` | Feeds the AI operational rules for the Custom Input workflow. |
 
 ---
 
