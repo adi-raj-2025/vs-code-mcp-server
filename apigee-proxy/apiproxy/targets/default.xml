@@ -1,5 +1,0 @@
-<TargetEndpoint name="default">
-  <HTTPTargetConnection>
-    <URL>http://nowhere.com</URL>
-  </HTTPTargetConnection>
-</TargetEndpoint>

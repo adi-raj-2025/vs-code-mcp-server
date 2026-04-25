@@ -2,7 +2,6 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { readFile } from "node:fs/promises";
-import { loadConfig, saveConfig } from "./config";
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
@@ -12,63 +11,6 @@ const server = new McpServer({
   name: "apigee-trial-server",
   version: "1.0.0",
 });
-
-// Updated add-jasmine-dependency to only store command
-
-server.registerTool("add-jasmine-dependency",{
-    title: "Apigee Code Coverage Setup",
-    description: "Set up code coverage command for Apigee project",
-    inputSchema: z.object({
-      command: z.string().optional()
-    })
-  },
-  async (input) => {
-    const { command } = input;
-
-    // If command is provided, save it
-    if (command) {
-      saveConfig({
-        command: command
-      });
-
-      return {
-        content: [{
-          type: "text",
-          text: `✅ Coverage command saved successfully!
-
-            **Command:** ${command}
-
-            **Note:** The path will be dynamically discovered each time you run the automation based on your current directory.
-
-            **Next Steps:**
-            1. Navigate to your Apigee project in terminal
-            2. Run #automate-test-case to start automation`
-        }]
-      };
-    }
-
-    // If command is not provided, ask for it via elicitation
-    return {
-      content: [{
-        type: "text",
-        text: `I need the coverage command to run for your Apigee project.
-
-          The command should be in PowerShell format.`
-      }],
-      elicitation: {
-        prompt: "Please provide the command to run code coverage",
-        fields: [
-          {
-            name: "command",
-            label: "Coverage command",
-            placeholder: `"C:\\Users\\{HOST_NAME}\\AppData\\Roaming\\npm\\istanbul" cover "C:\\Users\\{HOST_NAME\\AppData\\Roaming\\npm\\node_modules\\jasmine-node\\bin\\jasmine-node" spec`,
-            required: true
-          }
-        ]
-      }
-    };
-  }
-);
 
 // Simple tool to read and return coverage report content
 server.registerTool("analyze-apigee-report",
@@ -83,7 +25,7 @@ server.registerTool("analyze-apigee-report",
     try {
       // Get resources path
       let resourcesPath = input.resourcesPath;
-      
+
       if (!resourcesPath) {
         // Try to auto-discover
         const discoveredPath = findResourcesPathFromCurrentDir();
@@ -103,9 +45,9 @@ server.registerTool("analyze-apigee-report",
         }
         resourcesPath = discoveredPath;
       }
-      
+
       const coveragePath = path.join(resourcesPath, 'coverage', 'lcov.info');
-      
+
       // Check if coverage file exists
       if (!fs.existsSync(coveragePath)) {
         return {
@@ -115,16 +57,16 @@ server.registerTool("analyze-apigee-report",
 
 **Before using this tool, you must:**
 1. Navigate to resources directory: \`cd "${resourcesPath.replace(/\\/g, '\\\\')}"\`
-2. Run coverage command: \`& {your_coverage_command}\`
+2. Run coverage command: \`& {your_coverage_command}\` (or just \`{your_coverage_command}\` on Linux/Mac)
 
 **The coverage file should be generated at:** ${coveragePath}`
           }]
         };
       }
-      
+
       // Read the lcov file
       const fileContent = await fs.promises.readFile(coveragePath, 'utf-8');
-      
+
       return {
         content: [{
           type: "text",
@@ -147,7 +89,7 @@ ${fileContent}
 5. Track progress towards 100% coverage`
         }]
       };
-      
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       return {
@@ -168,7 +110,7 @@ ${fileContent}
 // Helper function to find resources directory
 function findResourcesPathFromCurrentDir() {
   const cwd = process.cwd();
-  
+
   // Common patterns to check
   const patternsToCheck = [
     { path: cwd, check: ['jsc', 'spec'] },
@@ -177,13 +119,13 @@ function findResourcesPathFromCurrentDir() {
     { path: path.join(cwd, 'apiproxy', 'resources'), check: ['jsc', 'spec'] },
     { path: path.join(cwd, '..', 'resources'), check: ['jsc', 'spec'] },
   ];
-  
+
   for (const pattern of patternsToCheck) {
     try {
       if (fs.existsSync(pattern.path)) {
         const jscPath = path.join(pattern.path, 'jsc');
         const specPath = path.join(pattern.path, 'spec');
-        
+
         if (fs.existsSync(jscPath) && fs.existsSync(specPath)) {
           return pattern.path;
         }
@@ -192,7 +134,7 @@ function findResourcesPathFromCurrentDir() {
       // Continue to next pattern
     }
   }
-  
+
   return null;
 }
 
@@ -207,19 +149,19 @@ server.registerTool("auto-discover-resources",
   },
   async (input) => {
     const startPath: string = input.searchPath || process.cwd();
-    
+
     try {
       console.log(`Starting search from: ${startPath}`);
-      
+
       // Function to recursively search for resources directory
       function findResourcesDir(currentPath: string, depth: number = 0, maxDepth: number = 4): string | null {
         if (depth > maxDepth) return null;
-        
+
         try {
           // Check if current directory is resources
           const jscPath = path.join(currentPath, 'jsc');
           const specPath = path.join(currentPath, 'spec');
-          
+
           if (fs.existsSync(jscPath) && fs.existsSync(specPath)) {
             // Check if jsc and spec are directories
             const jscStat = fs.statSync(jscPath);
@@ -228,7 +170,7 @@ server.registerTool("auto-discover-resources",
               return currentPath;
             }
           }
-          
+
           // Check if this is a resources directory (name check)
           if (path.basename(currentPath) === 'resources') {
             // Check parent for apiproxy to confirm Apigee structure
@@ -240,26 +182,26 @@ server.registerTool("auto-discover-resources",
               }
             }
           }
-          
+
           // Search subdirectories
           const entries = fs.readdirSync(currentPath, { withFileTypes: true });
-          
+
           for (const entry of entries) {
-            if (entry.isDirectory() && 
-                !entry.name.startsWith('.') && 
-                entry.name !== 'node_modules' && 
-                entry.name !== 'coverage') {
-              
+            if (entry.isDirectory() &&
+              !entry.name.startsWith('.') &&
+              entry.name !== 'node_modules' &&
+              entry.name !== 'coverage') {
+
               const found: string | null = findResourcesDir(
-                path.join(currentPath, entry.name), 
-                depth + 1, 
+                path.join(currentPath, entry.name),
+                depth + 1,
                 maxDepth
               );
-              
+
               if (found) return found;
             }
           }
-          
+
           // If not found in current directory, try parent (only at depth 0)
           if (depth === 0 && currentPath !== path.parse(currentPath).root) {
             const parentPath = path.dirname(currentPath);
@@ -267,22 +209,23 @@ server.registerTool("auto-discover-resources",
               return findResourcesDir(parentPath, depth + 1, maxDepth);
             }
           }
-          
+
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           console.log(`Error searching ${currentPath}: ${errorMessage}`);
         }
-        
+
         return null;
       }
-      
+
       // Start search
       const resourcesPath: string | null = findResourcesDir(startPath);
-      
+
       if (resourcesPath) {
-        // Escape backslashes for PowerShell
-        const escapedPath = resourcesPath.replace(/\\/g, '\\\\');
-        
+        // Escape backslashes for PowerShell on Windows
+        const isWindows = process.platform === 'win32';
+        const escapedPath = isWindows ? resourcesPath.replace(/\\/g, '\\\\') : resourcesPath;
+
         return {
           content: [{
             type: "text",
@@ -348,7 +291,7 @@ done
           }]
         };
       }
-      
+
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       return {
@@ -368,21 +311,25 @@ Please check your permissions or try a different starting path.`
 // First, create a tool that provides the workflow instructions
 server.registerTool("get-apigee-workflow-instructions",
   {
-    description: "Get the complete Apigee test automation workflow instructions and context"
+    description: "Get the complete Apigee test automation workflow instructions and context",
+    inputSchema: z.object({
+      command: z.string().optional()
+    })
   },
-  async () => {
-    const config = loadConfig();
-    const effectiveCommand = config.command;
-    
+  async (input) => {
+    const effectiveCommand = input.command;
+
     if (!effectiveCommand) {
       return {
         content: [{
           type: "text",
-          text: "Configuration not found. Please run #add-jasmine-dependency first."
+          text: `❌ ERROR: You must provide the 'command' argument to this tool.
+          
+If you don't know the command, you MUST stop and ask the user for it. Do not guess it.`
         }]
       };
     }
-    
+
     return {
       content: [{
         type: "text",
@@ -419,8 +366,9 @@ apiproxy/
    - **CONFIRM SINGLE FILE:** Verify you are working on ONLY ONE file
 
 **2. INITIAL COVERAGE RUN:**
-   Use #runInTerminal with this EXACT PowerShell command:
-   \`& ${effectiveCommand}\`
+   Use #runInTerminal to execute the command with the correct OS syntax:
+   - Windows PowerShell: \`& ${effectiveCommand}\`
+   - Linux/Mac/Bash: \`${effectiveCommand}\`
 
 **3. ANALYZE REPORT:**
    Use #analyze-apigee-report resource
@@ -449,9 +397,8 @@ apiproxy/
 ✅ DO: Declare the current file name before any analysis
 ✅ DO: Filter coverage analysis to ONLY the corresponding JavaScript file
 ✅ DO: Follow {javascript_name}Spec.js naming pattern  
-✅ DO: Use PowerShell syntax: & "command"
+✅ DO: Execute the command using the proper syntax for the user's OS (PowerShell for Windows, Bash for Linux).
 ❌ DON'T: Modify .js source files
-❌ DON'T: Change command syntax to bash
 ❌ DON'T: Look at, analyze, or calculate coverage for ANY other files
 ❌ DON'T: Modify any Spec.js files except the one in current Copilot chat
 ❌ DON'T: Even mention other files in the coverage report
@@ -467,25 +414,16 @@ apiproxy/
   }
 );
 
-server.registerPrompt("automate-test-case",
+server.registerPrompt("1.automate-test-case",
   {
-    description: "Generate and analyze code coverage report for Apigee project"
-  },
-  async () => {
-    const config = loadConfig();
-    
-    if (!config.command) {
-      return {
-        messages: [{
-          role: "user",
-          content: {
-            type: "text",
-            text: `Configuration needed. Please use #add-jasmine-dependency tool first.`
-          }
-        }]
-      };
+    description: "Generate and analyze code coverage report for Apigee project",
+    argsSchema: {
+      command: z.string().optional().describe("The command to run code coverage")
     }
-    
+  },
+  async (args) => {
+    const providedCommand = args?.command;
+
     return {
       messages: [{
         role: "user",
@@ -496,6 +434,11 @@ server.registerPrompt("automate-test-case",
 **CRITICAL REQUIREMENT:** You must work on ONLY ONE Spec.js file - the one currently open in your Copilot chat context.
 
 **WORKFLOW EXECUTION:**
+
+**STEP 0: COVERAGE COMMAND**
+${providedCommand
+              ? `The coverage command to use is: \`${providedCommand}\``
+              : `**MANDATORY:** You MUST STOP right now and ask me: "Please provide the exact terminal command to run code coverage (e.g. for PowerShell or Bash)." Do NOT guess the command. Do NOT run any tools yet. Wait for my reply with the command before moving to Step 1.`}
 
 **STEP 1: AUTO-DISCOVER RESOURCES DIRECTORY**
 
@@ -517,7 +460,7 @@ Run that EXACT command using #runInTerminal.
 
 **STEP 3: GET WORKFLOW INSTRUCTIONS**
 
-Now call this tool to get complete instructions: #get-apigee-workflow-instructions
+Now call this tool to get complete instructions: #get-apigee-workflow-instructions. Pass the coverage command to it if it requires one.
 
 **STEP 4: EXECUTE THE WORKFLOW - COPLIOT CONTEXT FILE ONLY**
 
@@ -530,7 +473,7 @@ Follow the instructions from #get-apigee-workflow-instructions exactly.
 
 **Single File Iteration Loop:**
 1. **DECLARE:** State which Spec.js file is open in your Copilot chat
-2. Run coverage command: \`& ${config.command}\`
+2. Run the coverage command (using the exact command established in Step 0)
 3. Analyze results with #analyze-apigee-report
 4. **FILTER TO ONE FILE:** In the coverage report, ONLY look at the JavaScript file that matches your declared Copilot file
 5. **CALCULATE FOR ONE FILE:** Calculate coverage percentage ONLY for this single file
@@ -557,7 +500,7 @@ Follow the instructions from #get-apigee-workflow-instructions exactly.
 - **FILTER ANALYSIS:** Only analyze the corresponding .js file in coverage report
 - **NEVER modify** .js source files
 - **DO NOT EVEN MENTION** other files in the coverage report
-- Use exact PowerShell syntax: \`& ${config.command}\`
+- Determine the OS environment and use the appropriate terminal syntax.
 
 **EXAMPLE WORKFLOW:**
 1. **You have open:** AddContentLanguageHeaderSpec.js in Copilot chat
@@ -582,17 +525,21 @@ Follow the instructions from #get-apigee-workflow-instructions exactly.
 // Tool for all-files workflow instructions
 server.registerTool("all-get-apigee-workflow-instructions",
   {
-    description: "Get the complete Apigee test automation workflow instructions for ALL Spec.js files (global coverage)"
+    description: "Get the complete Apigee test automation workflow instructions for ALL Spec.js files (global coverage)",
+    inputSchema: z.object({
+      command: z.string().optional()
+    })
   },
-  async () => {
-    const config = loadConfig();
-    const effectiveCommand = config.command;
+  async (input) => {
+    const effectiveCommand = input.command;
 
     if (!effectiveCommand) {
       return {
         content: [{
           type: "text",
-          text: "Configuration not found. Please run #add-jasmine-dependency first."
+          text: `❌ ERROR: You must provide the 'command' argument to this tool.
+          
+If you don't know the command, you MUST stop and ask the user for it. Do not guess it.`
         }]
       };
     }
@@ -628,8 +575,9 @@ apiproxy/
 **WORKFLOW STEPS – GLOBAL COVERAGE (ALL FILES):**
 
 **1. INITIAL COVERAGE RUN:**
-   Use #runInTerminal with this EXACT PowerShell command:
-   \`& ${effectiveCommand}\`
+   Use #runInTerminal to execute the command with the correct OS syntax:
+   - Windows PowerShell: \`& ${effectiveCommand}\`
+   - Linux/Mac/Bash: \`${effectiveCommand}\`
 
 **2. ANALYZE REPORT (FULL COVERAGE):**
    Use #analyze-apigee-report resource to get the complete lcov.info content.
@@ -668,9 +616,8 @@ apiproxy/
 ✅ DO: Analyze the full coverage report.
 ✅ DO: Modify **multiple** Spec.js files as needed.
 ✅ DO: Follow {javascript_name}Spec.js naming pattern.
-✅ DO: Use PowerShell syntax: & "command".
+✅ DO: Execute the command using the proper syntax for the user's OS (PowerShell for Windows, Bash for Linux).
 ❌ DON'T: Modify .js source files.
-❌ DON'T: Change command syntax to bash.
 ❌ DON'T: Stop until **all** files reach 100% coverage.`
       }]
     };
@@ -678,24 +625,15 @@ apiproxy/
 );
 
 // New prompt for all-files (global) coverage
-server.registerPrompt("all-automate-test-case",
+server.registerPrompt("2.all-automate-test-case",
   {
-    description: "Generate and analyze code coverage report for ALL JavaScript files (global 100% coverage)"
-  },
-  async () => {
-    const config = loadConfig();
-
-    if (!config.command) {
-      return {
-        messages: [{
-          role: "user",
-          content: {
-            type: "text",
-            text: `Configuration needed. Please use #add-jasmine-dependency tool first.`
-          }
-        }]
-      };
+    description: "Generate and analyze code coverage report for ALL JavaScript files (global 100% coverage)",
+    argsSchema: {
+      command: z.string().optional().describe("The command to run code coverage")
     }
+  },
+  async (args) => {
+    const providedCommand = args?.command;
 
     return {
       messages: [{
@@ -705,6 +643,11 @@ server.registerPrompt("all-automate-test-case",
           text: `I need to execute the **global Apigee test automation workflow** to achieve 100% code coverage for **ALL** JavaScript files.
 
 **WORKFLOW EXECUTION – GLOBAL COVERAGE (ALL FILES)**
+
+**STEP 0: COVERAGE COMMAND**
+${providedCommand
+              ? `The coverage command to use is: \`${providedCommand}\``
+              : `**MANDATORY:** You MUST STOP right now and ask me: "Please provide the exact terminal command to run code coverage (e.g. for PowerShell or Bash)." Do NOT guess the command. Do NOT run any tools yet. Wait for my reply with the command before moving to Step 1.`}
 
 **STEP 1: AUTO-DISCOVER RESOURCES DIRECTORY**
 
@@ -724,7 +667,7 @@ Run that EXACT command using #runInTerminal.
 
 **STEP 3: GET GLOBAL WORKFLOW INSTRUCTIONS**
 
-Now call this tool to get complete instructions for the **global** workflow: #all-get-apigee-workflow-instructions
+Now call this tool to get complete instructions for the **global** workflow: #all-get-apigee-workflow-instructions. Pass the coverage command to it if it requires one.
 
 **STEP 4: EXECUTE THE GLOBAL WORKFLOW**
 
@@ -732,7 +675,7 @@ Follow the instructions from #all-get-apigee-workflow-instructions exactly.
 
 **Global Iteration Loop:**
 
-1. Run coverage command: \`& ${config.command}\`
+1. Run the coverage command (using the exact command established in Step 0)
 2. Analyze results with #analyze-apigee-report.
 3. **Identify ALL JavaScript files with <100% coverage** from the report.
 4. For **each** uncovered file:
@@ -765,10 +708,10 @@ Follow the instructions from #all-get-apigee-workflow-instructions exactly.
 );
 
 
-async function main(){
+async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("Apigee MCP Server running on stdio");
 }
-  
+
 main();

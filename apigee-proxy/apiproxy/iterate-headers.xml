@@ -1,4 +1,0 @@
-<APIProxy name="iterate-headers">
-  <!-- This is the root of the application -->
-  <Description>A sample showing how to print all headers in an httpClient request.</Description>
-</APIProxy>
