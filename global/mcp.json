@@ -7,7 +7,7 @@
 				"run",
 				"server:dev"
 			],
-			"cwd": "D:\\vs-code-agentic-trial"
+			"cwd": "D:\\AI\\apigee-jest\\jasmine-automation"
 		}
 	},
 	"inputs": []

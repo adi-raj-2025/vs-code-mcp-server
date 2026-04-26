@@ -1,299 +1,231 @@
 # Apigee Test Automation MCP Server
 
-This Model Context Protocol (MCP) server automates the generation of Jasmine test cases for Apigee JavaScript policies by analyzing code coverage reports. It provides two primary workflows:
-
-- **`/mcp.apigee_trial.automate-test-case`** – Improves coverage for the **currently open Spec.js file** (single-file context).
-- **`/mcp.apigee_trial.all-automate-test-case`** – Works on **all JavaScript files** to achieve 100% global coverage.
-
-The server dynamically discovers your Apigee project structure, runs the coverage command, parses `lcov.info`, and suggests (or automatically adds) missing test cases.
-
----
+This Model Context Protocol (MCP) server acts as an AI agent designed to automate the generation of Jasmine test cases for Apigee JavaScript policies. By analyzing code coverage reports, the server guides an AI Copilot (like GitHub Copilot Chat) to iteratively write missing tests until you achieve 100% coverage.
 
 ## Features
 
-- 🔍 **Auto-discovery** – Finds the `resources` directory (containing `jsc/` and `spec/`) from your current working directory.
-- 📊 **Coverage analysis** – Parses `lcov.info` to identify uncovered lines, functions, and branches.
-- ✍️ **Test case generation** – Suggests or automatically appends test snippets to the corresponding `Spec.js` files.
-- 🧪 **Two workflows**:
-  - **Single-file** – Focus only on the Spec file currently open in your Copilot chat.
-  - **Global** – Improves all files until every JavaScript file reaches 100% coverage.
-- 🛠️ **Configuration persistence** – Stores your coverage command in `.mcp-config.json` for reuse.
+- 🔍 **Auto-Discovery** – Automatically locates your Apigee `resources/` directory from any starting path.
+- 📊 **Coverage Analysis** – Ingests `lcov.info` to precisely target uncovered lines, functions, and branches.
+- 🧪 **AI-Driven Iterations** – The AI autonomously runs coverage commands, analyzes gaps, and rewrites tests in a loop.
+- 💻 **OS-Aware** – Fully supports Windows (PowerShell) and Linux/Mac (Bash) command execution seamlessly.
+- 🔒 **Guardrailed Coverage Reads** – The AI is strictly instructed to always read coverage from the `lcov.info` file (via `#analyzeJasmineTestReport`) and never rely on terminal output.
 
 ---
 
-## Prerequisites
+## The Workflows
 
-- [Node.js](https://nodejs.org/) (v16 or later)
-- An Apigee project with the following structure:
+The server provides three primary workflows (Slash Commands/Prompts):
 
-```
-apiproxy/
-└── resources/
-    ├── jsc/                 # JavaScript source files (each in its own subfolder)
-    │   └── myPolicy/
-    │       └── myPolicy.js
-    ├── spec/                # Jasmine test files
-    │   └── myPolicySpec.js
-    └── coverage/            # Generated coverage reports (created after running the tool)
-        └── lcov.info
-```
+1. **`/CurrentSpecWorkFlow` (Single File Workflow)**
+   Perfect for when you have a specific `Spec.js` file open in your editor. The AI will strictly filter its analysis and edits exclusively to that single file, ignoring the rest of the project until that file reaches 100% coverage.
+
+2. **`/AllSpecWorkFlow` (Global Workflow)**
+   The AI will ingest the entire project's coverage report and iteratively work through *every* uncovered file, adding tests to multiple files until global 100% coverage is achieved across the entire project.
+
+3. **`/CustomSpecWorkFlow` (Custom Input Workflow)**
+   Perfect for when you want to supply custom test scenarios instead of relying on coverage gaps. The AI will read your requirements from `resources/TestCases/{your_file}Test.txt` and generate the exact tests you asked for in your currently open `Spec.js` file. This workflow does not run tests or require a coverage command.
 
 ---
 
-# Installation
+## Installation & Setup
 
-### 1. Clone the repository
+### Prerequisites
+- [Node.js](https://nodejs.org/) (v18 or later recommended)
+- An Apigee project with the standard structure (`apiproxy/resources/jsc/` and `apiproxy/resources/spec/`).
 
-```bash
-git clone https://github.com/yourusername/apigee-test-automation-mcp.git
-cd apigee-test-automation-mcp
-```
-
-### 2. Install dependencies
+### Building Locally
 
 ```bash
+git clone <repository-url>
+cd jasmine-automation
 npm install
+npm run server:build
 ```
 
-### 3. Build the project (if using TypeScript)
+### Packaging as a Standalone Executable (Windows/Linux/Mac)
+
+If you want to package the server into a single executable file so it can be run without needing `node` in the MCP configuration:
 
 ```bash
-npm run build
-```
+# Build for all platforms
+npm run server:package
 
-### 4. Start the MCP server
+# Or build for a specific platform:
+npm run server:package:win
+npm run server:package:linux
+npm run server:package:mac
+```
+This will generate `Jasmine-test-Automation.exe`, `Jasmine-test-Automation-linux`, and `Jasmine-test-Automation-macos` files in your root folder.
+
+### Inspecting the Server (Development)
+
+Use the MCP Inspector UI to browse tools and prompts interactively:
 
 ```bash
-node dist/index.js
+npm run server:inspect
 ```
 
-The server will run on **stdio** and is ready to be connected by an MCP client (e.g., **VS Code with Copilot Chat**).
+This launches the inspector at `http://localhost:6274` with authentication disabled for local development.
+
+> **Note:** The `server:dev` script runs the server directly via `tsx` (included as a dev dependency). No pre-build step is needed when using the inspector.
+
+### Running Locally (Connecting to your IDE)
+
+To connect this server to your MCP client, you need to configure your IDE's MCP settings file. The schema differs between clients — **use the correct one for your client**.
+
+> **⚠️ Critical: VS Code vs Claude Desktop Schema**
+>
+> | Client | Root key | Extra field |
+> |---|---|---|
+> | **VS Code Copilot** | `"servers"` | `"type": "stdio"` required |
+> | **Claude Desktop** | `"mcpServers"` | not needed |
+>
+> VS Code **silently ignores** the `"mcpServers"` key. If you use the wrong schema, **no Start/Restart/Stop buttons will appear** in the Copilot Chat panel.
 
 ---
 
-# Configuration
+#### VS Code GitHub Copilot
 
-Before using the automation, you must set up your **coverage command**.
+Config file location: `%APPDATA%\Code\User\mcp.json` (Windows) or `~/.config/Code/User/mcp.json` (Linux/Mac)
 
-## `#add-jasmine-dependency`
+Alternatively, for a workspace-specific config, create `.vscode/mcp.json` inside your project.
 
-This tool stores the PowerShell command needed to generate coverage reports.
+**Option 1: Using the packaged Executable (Recommended):**
 
-### Usage (first time)
-
+*Windows Example:*
+```json
+{
+  "servers": {
+    "apigee-automation": {
+      "type": "stdio",
+      "command": "C:\\absolute\\path\\to\\Jasmine-test-Automation.exe",
+      "args": []
+    }
+  }
+}
 ```
-#add-jasmine-dependency
+
+*Linux Example:*
+
+> **⚠️ Important for Unix/Linux Users:** When you download the `Jasmine-test-Automation-linux` binary, you must give it execution permissions before it will work in your IDE. Run this in your terminal first:
+> ```bash
+> chmod +x /absolute/path/to/jasmine-automation/Jasmine-test-Automation-linux
+> ```
+
+```json
+{
+  "servers": {
+    "apigee-automation": {
+      "type": "stdio",
+      "command": "/absolute/path/to/jasmine-automation/Jasmine-test-Automation-linux",
+      "args": []
+    }
+  }
+}
 ```
 
-The server will ask for your coverage command, for example:
-
+**Option 2: Using standard Node.js (after building):**
+```json
+{
+  "servers": {
+    "apigee-automation": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["build/server.js"]
+    }
+  }
+}
 ```
-"C:\Users\...\istanbul" cover "C:\Users\...\jasmine-node" spec
+
+**Option 3: Run it dynamically using the dev script:**
+```json
+{
+  "servers": {
+    "apigee-automation": {
+      "type": "stdio",
+      "command": "npm",
+      "args": ["run", "--silent", "server:dev"]
+    }
+  }
+}
 ```
-
-Provide it once; it will be saved in **`.mcp-config.json`** in the current directory.
-
-To update the command, simply run the tool again and supply the new command.
-
-**Note:** The path to your `resources` directory is **not stored** – it is auto-discovered each time you run a workflow.
 
 ---
 
-# Usage – Single-File Workflow (`automate-test-case`)
+#### Claude Desktop
 
-Use this when you have a specific **Spec.js** file open in your Copilot chat and want to bring only that corresponding JavaScript file to **100% coverage**.
+Config file: `%APPDATA%\Claude\claude_desktop_config.json`
 
-## Steps
-
-1. Open the desired `{policyName}Spec.js` file in your editor.
-
-2. Run the command:
-
+```json
+{
+  "mcpServers": {
+    "apigee-automation": {
+      "command": "C:\\absolute\\path\\to\\Jasmine-test-Automation.exe",
+      "args": []
+    }
+  }
+}
 ```
-/mcp.apigee_trial.automate-test-case
-```
-
-*(If your MCP client uses a different prefix, adjust accordingly.)*
-
-3. Follow the instructions provided by the server:
-
-- It will first ask you to auto-discover the resources directory via:
-
-```
-#auto-discover-resources
-```
-
-- Then you’ll need to `cd` into that directory.
-
-- Finally, the server will guide you through the iterative loop:
-
-  1. Run the coverage command.
-  2. Analyze the report (using `#analyze-apigee-report`).
-  3. Modify only the open **Spec.js** file based on uncovered elements.
-  4. Re-run coverage until that single file reaches **100%**.
 
 ---
 
-# Usage – Global Workflow (`all-automate-test-case`)
-
-Use this to achieve **100% coverage across all JavaScript files** in your project.
-
-## Steps
-
-Run the command:
-
-```
-/mcp.apigee_trial.all-automate-test-case
-```
-
-The server will:
-
-1. Auto-discover the resources path.
-2. Read `resources/coverage/lcov.info`.
-3. List all JavaScript files with less than **100% coverage**.
-4. For each file, suggest test cases to add to the corresponding `Spec.js`.
-
-By default, the tool **only suggests changes**.
-
-To automatically append the test snippets to the files, add:
-
-```
-/mcp.apigee_trial.all-automate-test-case applyChanges:true
-```
-
-⚠️ **Use auto-apply with caution – always review the generated tests.**
-
-After applying changes:
-
-1. Re-run the coverage command.
-2. Repeat until all files are at **100% coverage**.
+Once saved, **fully restart your IDE** (close and reopen — not just Reload Window) so it establishes a fresh connection to the server.
 
 ---
 
-# Example Workflow
+## How to Use
 
-Assume your project is at:
+Using the automation is incredibly easy. Simply open your AI Chat interface and trigger the prompt.
 
-```
-C:\my-apigee-proxy
-```
+### **Step 1: Trigger the workflow**
+Type `/CurrentSpecWorkFlow` (or use your IDE's slash command menu). 
 
-and you have two policies: **AddHeader** and **RemoveHeader**.
+*Tip: If your IDE supports prompt arguments, you can optionally provide your coverage command directly (e.g. `/CurrentSpecWorkFlow "npm test"`).*
 
-### 1. Store coverage command (one time)
+### **Step 2: Provide the Coverage Command**
+If you didn't provide the command in Step 1, the AI is strictly instructed to stop and ask you for it:
+> *"Please provide the exact terminal command to run code coverage (e.g. for PowerShell or Bash)."*
 
-```
-#add-jasmine-dependency
-```
-
-Provide:
-
-```
-"C:\Users\Me\AppData\Roaming\npm\istanbul" cover "C:\Users\Me\AppData\Roaming\npm\node_modules\jasmine-node\bin\jasmine-node" spec
+Reply with your standard coverage execution command, for example:
+```powershell
+"C:\Users\username\istanbul" cover "C:\Users\username\jasmine-node" spec
 ```
 
-### 2. Auto-discover path
+### **Step 3: Watch the AI Work!**
+The AI will acknowledge your command and immediately execute its autonomous loop:
+1. It runs the `#findResourcesDirectoryPath` tool to find your files.
+2. It executes your coverage command in your IDE's terminal.
+3. It **immediately** calls the `#analyzeJasmineTestReport` tool to read the generated `lcov.info` — it does **not** use the terminal output for coverage data.
+4. It identifies the gaps in coverage and edits your `Spec.js` files to add the missing assertions.
+5. It re-runs the coverage command and repeats from step 3 until coverage is 100%.
 
-```
-#auto-discover-resources
-```
-
-Returns:
-
-```
-C:\my-apigee-proxy\apiproxy\resources
-```
-
-### 3. Navigate
-
-```
-cd "C:\my-apigee-proxy\apiproxy\resources"
-```
-
-### 4. Run coverage
-
-```
-& "C:\Users\Me\AppData\Roaming\npm\istanbul" cover "C:\Users\Me\AppData\Roaming\npm\node_modules\jasmine-node\bin\jasmine-node" spec
-```
-
-### 5. Global analysis
-
-```
-/mcp.apigee_trial.all-automate-test-case
-```
-
-Example result:
-
-- **AddHeader.js – 75%** (missing line 12, function `validateInput`)
-- **RemoveHeader.js – 80%** (missing branch at line 22)
-
-The tool suggests tests for:
-
-- `AddHeaderSpec.js`
-- `RemoveHeaderSpec.js`
-
-Apply changes (manually or with `applyChanges:true`), then re-run coverage.
+> ⚠️ **Important:** The terminal output after running the coverage command shows Jasmine pass/fail results only — it does **not** contain line-level lcov data. The AI is strictly instructed to always call `#analyzeJasmineTestReport` to read `lcov.info` directly.
 
 ---
 
-# Tools Summary
+## Available Tools (Under the Hood)
 
-| Tool / Command | Description |
+These are the tools the AI uses autonomously to interact with your filesystem. You don't need to call these yourself!
+
+| Tool | Description |
 |---|---|
-| `#add-jasmine-dependency` | Stores the coverage command in `.mcp-config.json`. |
-| `#auto-discover-resources` | Searches for the Apigee resources directory and returns its path. |
-| `#analyze-apigee-report` | Returns the raw content of `resources/coverage/lcov.info` for AI analysis. |
-| `#get-apigee-workflow-instructions` | Provides step-by-step instructions for the single-file workflow. |
-| `#get-apigee-workflow-instructions-all` | Provides instructions for the global workflow. |
-| `/mcp.apigee_trial.automate-test-case` | Initiates the single-file workflow (prompt). |
-| `/mcp.apigee_trial.all-automate-test-case` | Performs global coverage analysis and optionally applies changes (tool). |
+| `#findResourcesDirectoryPath` | Recursively searches the current directory to locate the Apigee `resources` folder. |
+| `#analyzeJasmineTestReport` | Reads and formats the raw `lcov.info` file — the **only** valid source of coverage truth. |
+| `#read-custom-test-data` | Reads specific test cases from `resources/TestCases/{name}Test.txt`. |
+| `#getCurrentSpecWorkFlowInstruction` | Feeds the AI strict operational rules and guardrails for the single-file workflow. |
+| `#getAllSpecWorkflowInstruction` | Feeds the AI global operational rules and guardrails for the entire project workflow. |
+| `#getCustomSpecWorkFlowInstruction` | Feeds the AI operational rules for the Custom Input workflow. |
 
 ---
 
-# Troubleshooting
+## Troubleshooting
 
-**`lcov.info not found`**
-
-Run the coverage command first using `#runInTerminal`.
-
----
-
-**Resources directory not discovered**
-
-Ensure you are inside or near the **Apigee project folder**. Try:
-
-```
-#auto-discover-resources
-```
-
-from the project root.
-
----
-
-**Coverage command not stored**
-
-Run:
-
-```
-#add-jasmine-dependency
-```
-
-and provide the command.
-
----
-
-**Generated tests cause syntax errors**
-
-Review the snippets; they are **simple placeholders** and may need adjustment for your test framework.
-
----
-
-# Contributing
-
-Contributions are welcome! Please open an **issue** or **pull request** on the GitHub repository.
-
----
-
-# License
-
-MIT
+- **`lcov.info not found`:** Ensure your coverage command actually generates an `lcov.info` file inside `resources/coverage/`.
+- **Resources directory not discovered:** Ensure your terminal is opened inside or near the root of the Apigee project folder. The project must have a `resources/jsc` and `resources/spec` folder.
+- **AI refuses to proceed:** The AI is strictly trained not to proceed without a valid terminal command. Make sure you answer its Step 0 question properly!
+- **AI reads terminal output instead of lcov.info:** This is fixed by design — the workflow instructions explicitly forbid using terminal output and mandate calling `#analyzeJasmineTestReport` after every coverage run.
+- **`server:inspect` fails to start:** Ensure you have run `npm install` so that `tsx` (a dev dependency) is available. If the inspector shows JSON parse errors, ensure the `DANGEROUSLY_OMIT_AUTH` env var has no spaces around the `=` sign in the npm script.
+- **No Start/Restart/Stop buttons appear in VS Code Copilot Chat:** You are using the wrong JSON schema. VS Code requires `"servers"` as the root key with `"type": "stdio"` on each entry. The `"mcpServers"` key is **Claude Desktop format** and is silently ignored by VS Code. See the configuration examples above.
+- **Exe works standalone but MCP client can't connect:** The executable must output **nothing** to `stdout` at startup. Any stray `console.log()` call in the server code will corrupt the MCP JSON stream and cause the client to disconnect immediately. All debug logging must use `console.error()` instead.
+- **Packaging the exe: `@modelcontextprotocol/inspector` must be in `devDependencies`:** If it is listed under `dependencies`, `pkg` will attempt to bundle it and its transitive ESM dependencies (like `open`, `jose`), which causes bundling failures. Keep it in `devDependencies` so it is excluded from the production bundle.
+- **Always run `server:build` before `server:package:win`:** The `server:package:win` script only runs `pkg` — it does **not** recompile TypeScript. If you modify any `.ts` source file, always run `npm run server:build` first, then `npm run server:package:win`. Use `npm run server:package` to do both in one step.
