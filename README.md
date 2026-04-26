@@ -30,17 +30,32 @@ The server provides three primary workflows (Slash Commands/Prompts):
 ## Installation & Setup
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) (v16 or later)
+- [Node.js](https://nodejs.org/) (v18 or later recommended)
 - An Apigee project with the standard structure (`apiproxy/resources/jsc/` and `apiproxy/resources/spec/`).
 
 ### Building Locally
 
 ```bash
 git clone <repository-url>
-cd vs-code-mcp-server
+cd jasmine-automation
 npm install
 npm run server:build
 ```
+
+### Packaging as a Standalone Executable (Windows/Linux/Mac)
+
+If you want to package the server into a single executable file so it can be run without needing `node` in the MCP configuration:
+
+```bash
+# Build for all platforms
+npm run server:package
+
+# Or build for a specific platform:
+npm run server:package:win
+npm run server:package:linux
+npm run server:package:mac
+```
+This will generate `Jasmine-test-Automation.exe`, `Jasmine-test-Automation-linux`, and `Jasmine-test-Automation-macos` files in your root folder.
 
 ### Inspecting the Server (Development)
 
@@ -56,37 +71,105 @@ This launches the inspector at `http://localhost:6274` with authentication disab
 
 ### Running Locally (Connecting to your IDE)
 
-To connect this server to your MCP client (like VS Code GitHub Copilot or Cline), you need to configure your IDE's MCP settings file (often `mcp.json` or `cline_mcp_settings.json`).
+To connect this server to your MCP client, you need to configure your IDE's MCP settings file. The schema differs between clients — **use the correct one for your client**.
 
-**Example configuration using standard Node.js (after building):**
+> **⚠️ Critical: VS Code vs Claude Desktop Schema**
+>
+> | Client | Root key | Extra field |
+> |---|---|---|
+> | **VS Code Copilot** | `"servers"` | `"type": "stdio"` required |
+> | **Claude Desktop** | `"mcpServers"` | not needed |
+>
+> VS Code **silently ignores** the `"mcpServers"` key. If you use the wrong schema, **no Start/Restart/Stop buttons will appear** in the Copilot Chat panel.
+
+---
+
+#### VS Code GitHub Copilot
+
+Config file location: `%APPDATA%\Code\User\mcp.json` (Windows) or `~/.config/Code/User/mcp.json` (Linux/Mac)
+
+Alternatively, for a workspace-specific config, create `.vscode/mcp.json` inside your project.
+
+**Option 1: Using the packaged Executable (Recommended):**
+
+*Windows Example:*
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "apigee-automation": {
+      "type": "stdio",
+      "command": "C:\\absolute\\path\\to\\Jasmine-test-Automation.exe",
+      "args": []
+    }
+  }
+}
+```
+
+*Linux Example:*
+
+> **⚠️ Important for Unix/Linux Users:** When you download the `Jasmine-test-Automation-linux` binary, you must give it execution permissions before it will work in your IDE. Run this in your terminal first:
+> ```bash
+> chmod +x /absolute/path/to/jasmine-automation/Jasmine-test-Automation-linux
+> ```
+
+```json
+{
+  "servers": {
+    "apigee-automation": {
+      "type": "stdio",
+      "command": "/absolute/path/to/jasmine-automation/Jasmine-test-Automation-linux",
+      "args": []
+    }
+  }
+}
+```
+
+**Option 2: Using standard Node.js (after building):**
+```json
+{
+  "servers": {
+    "apigee-automation": {
+      "type": "stdio",
       "command": "node",
-      "args": ["build/server.js"],
-      "cwd": "C:/absolute/path/to/vs-code-mcp-server"
+      "args": ["build/server.js"]
     }
   }
 }
 ```
 
-**Or run it dynamically using the dev script:**
+**Option 3: Run it dynamically using the dev script:**
+```json
+{
+  "servers": {
+    "apigee-automation": {
+      "type": "stdio",
+      "command": "npm",
+      "args": ["run", "--silent", "server:dev"]
+    }
+  }
+}
+```
+
+---
+
+#### Claude Desktop
+
+Config file: `%APPDATA%\Claude\claude_desktop_config.json`
+
 ```json
 {
   "mcpServers": {
     "apigee-automation": {
-      "command": "npm",
-      "args": ["run", "server:dev"],
-      "cwd": "C:/absolute/path/to/vs-code-mcp-server"
+      "command": "C:\\absolute\\path\\to\\Jasmine-test-Automation.exe",
+      "args": []
     }
   }
 }
 ```
 
-*(Note: Make sure to replace the `cwd` paths with the actual absolute path to where you cloned this repository.)*
+---
 
-Once saved, **restart your IDE or MCP client** so it establishes the connection to the server.
+Once saved, **fully restart your IDE** (close and reopen — not just Reload Window) so it establishes a fresh connection to the server.
 
 ---
 
@@ -142,3 +225,7 @@ These are the tools the AI uses autonomously to interact with your filesystem. Y
 - **AI refuses to proceed:** The AI is strictly trained not to proceed without a valid terminal command. Make sure you answer its Step 0 question properly!
 - **AI reads terminal output instead of lcov.info:** This is fixed by design — the workflow instructions explicitly forbid using terminal output and mandate calling `#analyzeJasmineTestReport` after every coverage run.
 - **`server:inspect` fails to start:** Ensure you have run `npm install` so that `tsx` (a dev dependency) is available. If the inspector shows JSON parse errors, ensure the `DANGEROUSLY_OMIT_AUTH` env var has no spaces around the `=` sign in the npm script.
+- **No Start/Restart/Stop buttons appear in VS Code Copilot Chat:** You are using the wrong JSON schema. VS Code requires `"servers"` as the root key with `"type": "stdio"` on each entry. The `"mcpServers"` key is **Claude Desktop format** and is silently ignored by VS Code. See the configuration examples above.
+- **Exe works standalone but MCP client can't connect:** The executable must output **nothing** to `stdout` at startup. Any stray `console.log()` call in the server code will corrupt the MCP JSON stream and cause the client to disconnect immediately. All debug logging must use `console.error()` instead.
+- **Packaging the exe: `@modelcontextprotocol/inspector` must be in `devDependencies`:** If it is listed under `dependencies`, `pkg` will attempt to bundle it and its transitive ESM dependencies (like `open`, `jose`), which causes bundling failures. Keep it in `devDependencies` so it is excluded from the production bundle.
+- **Always run `server:build` before `server:package:win`:** The `server:package:win` script only runs `pkg` — it does **not** recompile TypeScript. If you modify any `.ts` source file, always run `npm run server:build` first, then `npm run server:package:win`. Use `npm run server:package` to do both in one step.

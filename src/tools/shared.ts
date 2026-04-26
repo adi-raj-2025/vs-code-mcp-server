@@ -110,7 +110,7 @@ export function registerSharedTools(server: McpServer): void {
       const startPath: string = input.searchPath || process.cwd();
 
       try {
-        console.log(`Starting search from: ${startPath}`);
+        console.error(`Starting search from: ${startPath}`);
 
         function findResourcesDir(currentPath: string, depth: number = 0, maxDepth: number = 4): string | null {
           if (depth > maxDepth) return null;
@@ -164,7 +164,7 @@ export function registerSharedTools(server: McpServer): void {
 
           } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            console.log(`Error searching ${currentPath}: ${errorMessage}`);
+            console.error(`Error searching ${currentPath}: ${errorMessage}`);
           }
 
           return null;

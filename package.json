@@ -1,25 +1,40 @@
 {
-  "name": "vs-code-agentic-trial",
+  "name": "jasmine-automation",
   "version": "1.0.0",
   "description": "",
   "license": "ISC",
   "author": "",
   "type": "commonjs",
-  "main": "index.js",
+  "main": "build/server.js",
+  "bin": "build/server.js",
   "scripts": {
     "server:build": "tsc",
     "server:watch": "tsc --watch",
     "server:dev": "tsx src/server.ts",
-    "server:inspect": "set DANGEROUSLY_OMIT_AUTH=true && npx @modelcontextprotocol/inspector npm run --silent server:dev"
+    "server:inspect": "set DANGEROUSLY_OMIT_AUTH=true && npx @modelcontextprotocol/inspector npm run --silent server:dev",
+    "server:package:win": "npx pkg . --targets node18-win-x64 --output Jasmine-test-Automation.exe --icon ./app-logo.ico",
+    "server:package:linux": "npx pkg . --targets node18-linux-x64 --output Jasmine-test-Automation-linux --icon ./app-logo.ico",
+    "server:package:mac": "npx pkg . --targets node18-macos-x64 --output Jasmine-test-Automation-macos --icon ./app-logo.ico",
+    "server:package": "npm run server:build && npm run server:package:win && npm run server:package:linux && npm run server:package:mac"
   },
   "dependencies": {
-    "@modelcontextprotocol/inspector": "^0.18.0",
     "@modelcontextprotocol/sdk": "^1.25.2",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@modelcontextprotocol/inspector": "^0.18.0",
     "@types/node": "^25.0.9",
     "tsx": "^4.19.4",
     "typescript": "^5.9.3"
+  },
+  "pkg": {
+    "assets": [
+      "node_modules/@modelcontextprotocol/sdk/**/*"
+    ],
+    "targets": [
+      "node18-win-x64",
+      "node18-linux-x64",
+      "node18-macos-x64"
+    ]
   }
 }

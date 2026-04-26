@@ -99,9 +99,41 @@ The server is explicitly designed to handle both **Windows** and **Linux/Mac** f
 - Source files are in `src/`.
 - Compiled files go to `build/`.
 - **Always run `npm run server:build`** after modifying any file under `src/` to ensure TypeScript transpiles to `build/server.js`. The user's MCP client executes `build/server.js`, *not* the `.ts` files.
+- **Packaging:** To bundle the server into standalone executables, use `npm run server:package`. This uses `pkg` to compile `build/server.js` into `Jasmine-test-Automation.exe` (Windows), `Jasmine-test-Automation-linux`, and `Jasmine-test-Automation-macos` for distribution. You must `build` before you `package`. You can also run platform-specific scripts like `npm run server:package:linux`.
+- **`server:package:win` does NOT build:** It only runs `pkg`. If you edit TypeScript and then run only `server:package:win`, the old compiled JS will be packaged. Always use `npm run server:package` (which runs build first) or run `server:build` manually before `server:package:win`.
 - `tsx` is listed as a **devDependency** and is required for `npm run server:dev` (used by the inspector). If `tsx` is missing, the MCP inspector will fail with `SyntaxError: Unexpected token '>'` because npm's own output gets written to stdout and corrupts the stdio JSON stream.
+- `@modelcontextprotocol/inspector` is also in **devDependencies**. It must NOT be in `dependencies` — if it is, `pkg` will try to bundle it along with its transitive ESM dependencies (`open`, `jose`, etc.), which causes bytecode compilation failures and missing module warnings during packaging.
 - The `server:inspect` script uses `set DANGEROUSLY_OMIT_AUTH=true` (no spaces around `=`). Spaces around the `=` sign in a Windows `set` command create a variable with a trailing space in its name, silently breaking auth bypass.
 - The `server:inspect` script passes `--silent` to the inner `npm run server:dev` call to suppress npm's own banner from polluting the MCP stdio channel.
+
+### 5. VS Code vs Claude Desktop `mcp.json` Schema (Critical Gotcha)
+**The Problem:** VS Code Copilot and Claude Desktop use different JSON schemas for their MCP configuration files. Using the wrong schema causes VS Code to silently ignore the entire server entry — no Start/Restart/Stop buttons appear in the Copilot Chat panel.
+
+**The schemas:**
+
+| Client | Root key | Extra required field |
+|---|---|---|
+| VS Code Copilot (`%APPDATA%\Code\User\mcp.json` or `.vscode/mcp.json`) | `"servers"` | `"type": "stdio"` on each server |
+| Claude Desktop (`claude_desktop_config.json`) | `"mcpServers"` | not needed |
+
+**VS Code Example (correct):**
+```json
+{
+  "servers": {
+    "apigee-automation": {
+      "type": "stdio",
+      "command": "C:\\path\\to\\Jasmine-test-Automation.exe",
+      "args": []
+    }
+  }
+}
+```
+**Do not mix these schemas.** VS Code silently discards `"mcpServers"` with no error message.
+
+### 6. `console.log` Corrupts the MCP Stdio Stream
+**The Problem:** MCP communicates over `stdio` using newline-delimited JSON. Any plain text written to `stdout` (e.g., from `console.log()`) is interpreted as a malformed JSON message by the MCP client, immediately breaking the connection.
+**The Solution (Current Architecture):**
+All diagnostic or debug output in `src/tools/shared.ts` uses `console.error()`, which goes to `stderr` and is completely invisible to the MCP JSON stream. **Never use `console.log()` anywhere in server source files.** If you add new tools or utilities, always use `console.error()` for any debug output.
 
 ---
 
