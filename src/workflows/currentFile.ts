@@ -6,8 +6,8 @@ import { z } from "zod";
 // ---------------------------------------------------------------------------
 export function registerCurrentFileWorkflow(server: McpServer): void {
 
-  // ── Tool: get-apigee-workflow-instructions ────────────────────────────────
-  server.registerTool("get-apigee-workflow-instructions",
+  // ── Tool: getCurrentSpecWorkFlowInstruction ────────────────────────────────
+  server.registerTool("getCurrentSpecWorkFlowInstruction",
     {
       description: "Get the complete Apigee test automation workflow instructions and context",
       inputSchema: z.object({
@@ -33,7 +33,7 @@ export function registerCurrentFileWorkflow(server: McpServer): void {
 
 **CURRENT CONFIGURATION:**
 - Coverage Command: ${effectiveCommand}
-- Path: Use #auto-discover-resources tool to find your specific path
+- Path: Use #findResourcesDirectoryPath tool to find your specific path
 
 **DIRECTORY STRUCTURE (CRITICAL CONTEXT):**
 apiproxy/
@@ -52,12 +52,12 @@ apiproxy/
 2. Test file: resources/spec/{X}Spec.js
 3. Coverage file: resources/coverage/lcov.info
 
-**IMPORTANT:** Run #auto-discover-resources first to find your specific resources path.
+**IMPORTANT:** Run #findResourcesDirectoryPath first to find your specific resources path.
 
 **WORKFLOW STEPS:**
 
-**1. IDENTIFY CURRENT COPLIOT CHAT CONTEXT FILE (CRITICAL FIRST STEP):**
-   - **LOOK AT COPLIOT CHAT:** Check which SPECIFIC {javascript_name}Spec.js file is currently open in your Copilot chat context
+**1. IDENTIFY CURRENT COPILOT CHAT CONTEXT FILE (CRITICAL FIRST STEP):**
+   - **LOOK AT COPILOT CHAT:** Check which SPECIFIC {javascript_name}Spec.js file is currently open in your Copilot chat context
    - **DECLARE THE FILE:** Explicitly state: "Current Copilot chat context file: {filename}Spec.js"
    - **CONFIRM SINGLE FILE:** Verify you are working on ONLY ONE file
 
@@ -69,22 +69,22 @@ apiproxy/
    ⚠️ **CRITICAL — AFTER RUNNING THE COMMAND:**
    - **DO NOT read or parse the terminal output for coverage data.**
    - **The terminal output is jasmine test results only — it does NOT contain accurate lcov coverage data.**
-   - **IMMEDIATELY** call the #analyze-apigee-report tool in the very next step.
+   - **IMMEDIATELY** call the #analyzeJasmineTestReport tool in the very next step.
 
 **3. ANALYZE REPORT (MANDATORY TOOL CALL — NO EXCEPTIONS):**
-   - ✅ **YOU MUST call the #analyze-apigee-report tool RIGHT NOW.**
+   - ✅ **YOU MUST call the #analyzeJasmineTestReport tool RIGHT NOW.**
    - ❌ **DO NOT use terminal output to determine coverage.** The terminal shows jasmine pass/fail, NOT line-level lcov data.
    - ❌ **DO NOT skip this step or assume coverage from the terminal.**
    - The tool reads the generated \`lcov.info\` file — this is the ONLY valid source of coverage truth.
-   - Call: #analyze-apigee-report
+   - Call: #analyzeJasmineTestReport
 
-**4. FILTER ANALYSIS TO CURRENT COPLIOT FILE ONLY:**
-   - **FOCUS ON ONE FILE:** In the lcov report returned by #analyze-apigee-report, ONLY look at the JavaScript file that corresponds to your current Copilot chat context file
+**4. FILTER ANALYSIS TO CURRENT COPILOT FILE ONLY:**
+   - **FOCUS ON ONE FILE:** In the lcov report returned by #analyzeJasmineTestReport, ONLY look at the JavaScript file that corresponds to your current Copilot chat context file
    - **EXTRACT BASE NAME:** If current file is "AddContentLanguageHeaderSpec.js", ONLY analyze "AddContentLanguageHeader.js"
    - **CALCULATE COVERAGE:** Calculate coverage percentage ONLY for this single file using the lcov data
    - **FIND UNCOVERED LINES:** Identify uncovered lines/functions/branches ONLY for this file from the lcov data
 
-**5. IMPROVE ONLY THE CURRENT COPLIOT FILE:**
+**5. IMPROVE ONLY THE CURRENT COPILOT FILE:**
    - **MODIFY ONLY:** Only modify the {javascript_name}Spec.js file currently open in your Copilot chat
    - **ADD TESTS:** Add test cases ONLY for uncovered lines/branches in this single file
    - **NEVER modify:** .js source files in jsc/
@@ -92,29 +92,29 @@ apiproxy/
 
 **6. RE-RUN COVERAGE:**
    Same command as step 2: \`& ${effectiveCommand}\`
-   ⚠️ Again: DO NOT read terminal output — call #analyze-apigee-report immediately after.
+   ⚠️ Again: DO NOT read terminal output — call #analyzeJasmineTestReport immediately after.
 
-**7. CALL #analyze-apigee-report AGAIN:**
-   - ✅ Call #analyze-apigee-report to read the updated lcov.info.
+**7. CALL #analyzeJasmineTestReport AGAIN:**
+   - ✅ Call #analyzeJasmineTestReport to read the updated lcov.info.
    - ❌ Do NOT rely on terminal output to judge coverage progress.
 
-**8. CHECK COVERAGE FOR CURRENT COPLIOT FILE ONLY:**
+**8. CHECK COVERAGE FOR CURRENT COPILOT FILE ONLY:**
    - **If CURRENT FILE coverage = 100%:** Provide summary for this file and STOP
    - **If CURRENT FILE coverage < 100%:** Return to step 4 (continue improving THIS SINGLE FILE)
 
-**STRICT COPLIOT-CONTEXT RULES:**
+**STRICT COPILOT-CONTEXT RULES:**
 ✅ DO: Work on ONLY the Spec.js file currently open in your Copilot chat
 ✅ DO: Declare the current file name before any analysis
 ✅ DO: Filter coverage analysis to ONLY the corresponding JavaScript file
 ✅ DO: Follow {javascript_name}Spec.js naming pattern  
 ✅ DO: Execute the command using the proper syntax for the user's OS (PowerShell for Windows, Bash for Linux).
-✅ DO: ALWAYS call #analyze-apigee-report immediately after every coverage command run.
+✅ DO: ALWAYS call #analyzeJasmineTestReport immediately after every coverage command run.
 ❌ DON'T: Modify .js source files
 ❌ DON'T: Look at, analyze, or calculate coverage for ANY other files
 ❌ DON'T: Modify any Spec.js files except the one in current Copilot chat
 ❌ DON'T: Even mention other files in the coverage report
 ❌ DON'T: Use terminal/console output to determine coverage — it only shows jasmine pass/fail, NOT lcov line data.
-❌ DON'T: Skip calling #analyze-apigee-report under any circumstances.
+❌ DON'T: Skip calling #analyzeJasmineTestReport under any circumstances.
 
 **EXAMPLE:**
 - **Copilot chat context:** You have AddContentLanguageHeaderSpec.js open
@@ -127,8 +127,8 @@ apiproxy/
     }
   );
 
-  // ── Prompt: CurrentjavascriptFile ─────────────────────────────────────────
-  server.registerPrompt("CurrentjavascriptFile",
+  // ── Prompt: CurrentSpecWorkFlow ─────────────────────────────────────────
+  server.registerPrompt("CurrentSpecWorkFlow",
     {
       description: "Generate and analyze code coverage report for Apigee project",
       argsSchema: {
@@ -158,7 +158,7 @@ ${providedCommand
 
 First, let me automatically discover your Apigee resources directory.
 
-Run this tool: #auto-discover-resources
+Run this tool: #findResourcesDirectoryPath
 
 This tool will:
 1. Search for a directory containing both "jsc" and "spec" subdirectories
@@ -167,18 +167,18 @@ This tool will:
 
 **STEP 2: NAVIGATE TO DISCOVERED DIRECTORY**
 
-After running #auto-discover-resources, you'll get a command like:
+After running #findResourcesDirectoryPath, you'll get a command like:
 \`cd "C:\\\\path\\\\to\\\\your\\\\apiproxy\\\\resources"\`
 
 Run that EXACT command using #runInTerminal.
 
 **STEP 3: GET WORKFLOW INSTRUCTIONS**
 
-Now call this tool to get complete instructions: #get-apigee-workflow-instructions. Pass the coverage command to it if it requires one.
+Now call this tool to get complete instructions: #getCurrentSpecWorkFlowInstruction. Pass the coverage command to it if it requires one.
 
-**STEP 4: EXECUTE THE WORKFLOW - COPLIOT CONTEXT FILE ONLY**
+**STEP 4: EXECUTE THE WORKFLOW - COPILOT CONTEXT FILE ONLY**
 
-Follow the instructions from #get-apigee-workflow-instructions exactly.
+Follow the instructions from #getCurrentSpecWorkFlowInstruction exactly.
 
 **MANDATORY FIRST ACTION - DECLARE CURRENT FILE:**
 **Before doing ANY analysis, you MUST declare which file is open in your Copilot chat.**
@@ -188,17 +188,17 @@ Follow the instructions from #get-apigee-workflow-instructions exactly.
 **Single File Iteration Loop:**
 1. **DECLARE:** State which Spec.js file is open in your Copilot chat
 2. Run the coverage command (using the exact command established in Step 0)
-3. ⚠️ **IMMEDIATELY after running the command — call #analyze-apigee-report**
+3. ⚠️ **IMMEDIATELY after running the command — call #analyzeJasmineTestReport**
    - ❌ **DO NOT read or interpret the terminal output as coverage data**
    - ❌ **The terminal shows jasmine test results, NOT lcov coverage data — ignore it completely**
-   - ✅ **Call #analyze-apigee-report tool right now — this is mandatory**
-4. **FILTER TO ONE FILE:** From the lcov data returned by #analyze-apigee-report, ONLY look at the JavaScript file that matches your declared Copilot file
+   - ✅ **Call #analyzeJasmineTestReport tool right now — this is mandatory**
+4. **FILTER TO ONE FILE:** From the lcov data returned by #analyzeJasmineTestReport, ONLY look at the JavaScript file that matches your declared Copilot file
 5. **CALCULATE FOR ONE FILE:** Calculate coverage percentage ONLY for this single file using lcov data
 6. **STRICTLY IGNORE OTHERS:** DO NOT even read coverage data for any other files
 7. If THIS SINGLE FILE coverage < 100%:
    - Modify ONLY the Spec.js file you declared
    - **DO NOT EVEN OPEN** any other Spec.js files
-   - Return to step 2 (run coverage command again, then immediately call #analyze-apigee-report)
+   - Return to step 2 (run coverage command again, then immediately call #analyzeJasmineTestReport)
 8. If THIS SINGLE FILE coverage = 100%:
    - Provide summary for this specific file only
    - Workflow for this file is COMPLETE
@@ -211,15 +211,15 @@ Follow the instructions from #get-apigee-workflow-instructions exactly.
 - **IGNORE OTHERS COMPLETELY:** Pretend other files don't exist in the coverage report
 - Continue looping until the SINGLE Copilot context file reaches 100% coverage
 
-**CRITICAL COPLIOT-CONTEXT RULES:**
+**CRITICAL COPILOT-CONTEXT RULES:**
 - **WORK ON ONE FILE ONLY:** The Spec.js file currently open in your Copilot chat
 - **DECLARE FIRST:** Always declare the file name before analysis
-- **FILTER ANALYSIS:** Only analyze the corresponding .js file in the lcov report from #analyze-apigee-report
+- **FILTER ANALYSIS:** Only analyze the corresponding .js file in the lcov report from #analyzeJasmineTestReport
 - **NEVER modify** .js source files
 - **DO NOT EVEN MENTION** other files in the coverage report
 - Determine the OS environment and use the appropriate terminal syntax.
-- **NEVER use terminal output for coverage data** — always call #analyze-apigee-report after every run.
-- **#analyze-apigee-report is MANDATORY after every coverage command** — no exceptions.
+- **NEVER use terminal output for coverage data** — always call #analyzeJasmineTestReport after every run.
+- **#analyzeJasmineTestReport is MANDATORY after every coverage command** — no exceptions.
 
 **EXAMPLE WORKFLOW:**
 1. **You have open:** AddContentLanguageHeaderSpec.js in Copilot chat

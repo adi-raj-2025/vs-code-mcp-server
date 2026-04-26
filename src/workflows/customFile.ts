@@ -13,7 +13,7 @@ export function registerCustomFileWorkflow(server: McpServer): void {
   server.registerTool("read-custom-test-data",
     {
       title: "Read Custom Test Data",
-      description: "Read the custom test cases input file from the TestData directory",
+      description: "Read the custom test cases input file from the TestCases directory",
       inputSchema: z.object({
         javascriptName: z.string().describe("The base name of the JavaScript file (without .js or Spec.js)"),
         resourcesPath: z.string().optional().describe("Optional path to resources directory (auto-discovers if not provided)")
@@ -36,7 +36,7 @@ export function registerCustomFileWorkflow(server: McpServer): void {
           resourcesPath = discoveredPath;
         }
 
-        const testDataPath = path.join(resourcesPath, 'TestData', `${input.javascriptName}Input.txt`);
+        const testDataPath = path.join(resourcesPath, 'TestCases', `${input.javascriptName}Test.txt`);
 
         if (!fs.existsSync(testDataPath)) {
           return {
@@ -68,8 +68,8 @@ export function registerCustomFileWorkflow(server: McpServer): void {
     }
   );
 
-  // ── Tool: custom-get-apigee-workflow-instructions ─────────────────────────
-  server.registerTool("custom-get-apigee-workflow-instructions",
+  // ── Tool: getCustomSpecWorkFlowInstruction ─────────────────────────
+  server.registerTool("getCustomSpecWorkFlowInstruction",
     {
       description: "Get the complete Apigee test automation workflow instructions for Custom Test Cases",
       inputSchema: z.object({})
@@ -81,7 +81,7 @@ export function registerCustomFileWorkflow(server: McpServer): void {
           text: `**APIGEE CUSTOM TEST AUTOMATION WORKFLOW INSTRUCTIONS**
 
 **CURRENT CONFIGURATION:**
-- Path: Use #auto-discover-resources tool to find your specific path
+- Path: Use #findResourcesDirectoryPath tool to find your specific path
 
 **DIRECTORY STRUCTURE (CRITICAL CONTEXT):**
 apiproxy/
@@ -91,21 +91,21 @@ apiproxy/
 │   │       └── {javascript_name}.js  
 │   ├── spec/                   # Test specification files
 │   │   └── {javascript_name}Spec.js  
-│   ├── TestData/               # Custom Test cases File
-│   │   └── {javascript_name}Input.txt  
+│   ├── TestCases/               # Custom Test cases File
+│   │   └── {javascript_name}Test.txt  
 │   └── coverage/               
 
 **KEY PATTERNS:**
 1. Source file: resources/jsc/{X}/{X}.js
 2. Test file: resources/spec/{X}Spec.js
-3. Custom Test Data: resources/TestData/{X}Input.txt
+3. Custom Test Data: resources/TestCases/{X}Test.txt
 
-**IMPORTANT:** Run #auto-discover-resources first to find your specific resources path.
+**IMPORTANT:** Run #findResourcesDirectoryPath first to find your specific resources path.
 
 **WORKFLOW STEPS:**
 
-**1. IDENTIFY CURRENT COPLIOT CHAT CONTEXT FILE (CRITICAL FIRST STEP):**
-   - **LOOK AT COPLIOT CHAT:** Check which SPECIFIC {javascript_name}Spec.js file is currently open in your Copilot chat context
+**1. IDENTIFY CURRENT COPILOT CHAT CONTEXT FILE (CRITICAL FIRST STEP):**
+   - **LOOK AT COPILOT CHAT:** Check which SPECIFIC {javascript_name}Spec.js file is currently open in your Copilot chat context
    - **DECLARE THE FILE:** Explicitly state: "Current Copilot chat context file: {filename}Spec.js"
    - **EXTRACT NAME:** Extract the base {javascript_name} (remove 'Spec.js' from the end)
 
@@ -113,9 +113,9 @@ apiproxy/
    - Use the #read-custom-test-data tool, passing the {javascript_name} you just extracted.
    - This will provide you with the user's specific test scenarios.
 
-**3. IMPROVE ONLY THE CURRENT COPLIOT FILE:**
+**3. IMPROVE ONLY THE CURRENT COPILOT FILE:**
    - **MODIFY ONLY:** Only modify the {javascript_name}Spec.js file currently open in your Copilot chat
-   - **ADD TESTS:** Add test cases strictly based on the requirements and inputs provided in the {javascript_name}Input.txt file.
+   - **ADD TESTS:** Add test cases strictly based on the requirements and inputs provided in the {javascript_name}Test.txt file.
    - **NEVER modify:** .js source files in jsc/
    - **DO NOT EVEN LOOK AT:** Any other Spec.js files in the folder
 
@@ -123,10 +123,10 @@ apiproxy/
    - Provide a summary of the added custom tests.
    - Workflow is COMPLETE for this file.
 
-**STRICT COPLIOT-CONTEXT RULES:**
+**STRICT COPILOT-CONTEXT RULES:**
 ✅ DO: Work on ONLY the Spec.js file currently open in your Copilot chat
 ✅ DO: Declare the current file name before any analysis
-✅ DO: Read the Custom Test Data from TestData/{javascript_name}Input.txt
+✅ DO: Read the Custom Test Data from TestCases/{javascript_name}Test.txt
 ❌ DON'T: Modify .js source files
 ❌ DON'T: Modify any Spec.js files except the one in current Copilot chat
 `
@@ -135,10 +135,10 @@ apiproxy/
     }
   );
 
-  // ── Prompt: CustomjavascriptFile ──────────────────────────────────────────
-  server.registerPrompt("CustomjavascriptFile",
+  // ── Prompt: CustomSpecWorkFlow ──────────────────────────────────────────
+  server.registerPrompt("CustomSpecWorkFlow",
     {
-      description: "Generate test cases based on user input from TestData folder for a single file",
+      description: "Generate test cases based on user input from TestCases folder for a single file",
       argsSchema: {}
     },
     async () => {
@@ -155,22 +155,22 @@ apiproxy/
 
 **STEP 1: AUTO-DISCOVER RESOURCES DIRECTORY**
 
-Run this tool: #auto-discover-resources
+Run this tool: #findResourcesDirectoryPath
 
 **STEP 2: NAVIGATE TO DISCOVERED DIRECTORY**
 
-After running #auto-discover-resources, you'll get a command like:
+After running #findResourcesDirectoryPath, you'll get a command like:
 \`cd "C:\\\\path\\\\to\\\\your\\\\apiproxy\\\\resources"\`
 
 Run that EXACT command using #runInTerminal.
 
 **STEP 3: GET WORKFLOW INSTRUCTIONS**
 
-Call this tool to get complete instructions: #custom-get-apigee-workflow-instructions.
+Call this tool to get complete instructions: #getCustomSpecWorkFlowInstruction.
 
-**STEP 4: EXECUTE THE WORKFLOW - COPLIOT CONTEXT FILE ONLY**
+**STEP 4: EXECUTE THE WORKFLOW - COPILOT CONTEXT FILE ONLY**
 
-Follow the instructions from #custom-get-apigee-workflow-instructions exactly.
+Follow the instructions from #getCustomSpecWorkFlowInstruction exactly.
 
 **MANDATORY FIRST ACTION - DECLARE CURRENT FILE:**
 **Before doing ANY analysis, you MUST declare which file is open in your Copilot chat.**
@@ -184,9 +184,9 @@ Follow the instructions from #custom-get-apigee-workflow-instructions exactly.
 4. **MODIFY:** Add test cases to the declared Spec.js file based on the custom data
 5. **FINISH:** Provide a summary for this specific file. Workflow is COMPLETE.
 
-**CRITICAL COPLIOT-CONTEXT RULES:**
+**CRITICAL COPILOT-CONTEXT RULES:**
 - **WORK ON ONE FILE ONLY:** The Spec.js file currently open in your Copilot chat
-- **READ CUSTOM DATA:** Base the tests entirely on the {javascript_name}Input.txt file in TestData.
+- **READ CUSTOM DATA:** Base the tests entirely on the {javascript_name}Test.txt file in TestCases.
 - **NEVER modify** .js source files
 
 **REQUIRED DECLARATION BEFORE PROCEEDING:**

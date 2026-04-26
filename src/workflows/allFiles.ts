@@ -6,8 +6,8 @@ import { z } from "zod";
 // ---------------------------------------------------------------------------
 export function registerAllFilesWorkflow(server: McpServer): void {
 
-  // ── Tool: all-get-apigee-workflow-instructions ────────────────────────────
-  server.registerTool("all-get-apigee-workflow-instructions",
+  // ── Tool: getAllSpecWorkflowInstruction ────────────────────────────
+  server.registerTool("getAllSpecWorkflowInstruction",
     {
       description: "Get the complete Apigee test automation workflow instructions for ALL Spec.js files (global coverage)",
       inputSchema: z.object({
@@ -33,7 +33,7 @@ export function registerAllFilesWorkflow(server: McpServer): void {
 
 **CURRENT CONFIGURATION:**
 - Coverage Command: ${effectiveCommand}
-- Path: Use #auto-discover-resources tool to find your specific path
+- Path: Use #findResourcesDirectoryPath tool to find your specific path
 
 **DIRECTORY STRUCTURE (CRITICAL CONTEXT):**
 apiproxy/
@@ -52,7 +52,7 @@ apiproxy/
 2. Test file: resources/spec/{X}Spec.js
 3. Coverage file: resources/coverage/lcov.info
 
-**IMPORTANT:** Run #auto-discover-resources first to find your specific resources path.
+**IMPORTANT:** Run #findResourcesDirectoryPath first to find your specific resources path.
 
 **WORKFLOW STEPS – GLOBAL COVERAGE (ALL FILES):**
 
@@ -64,16 +64,16 @@ apiproxy/
    ⚠️ **CRITICAL — AFTER RUNNING THE COMMAND:**
    - **DO NOT read or parse the terminal output for coverage data.**
    - **The terminal output is jasmine test results only — it does NOT contain accurate lcov coverage data.**
-   - **IMMEDIATELY** call the #analyze-apigee-report tool in the very next step.
+   - **IMMEDIATELY** call the #analyzeJasmineTestReport tool in the very next step.
 
 **2. ANALYZE REPORT — MANDATORY TOOL CALL (NO EXCEPTIONS):**
-   - ✅ **YOU MUST call #analyze-apigee-report tool RIGHT NOW.**
+   - ✅ **YOU MUST call #analyzeJasmineTestReport tool RIGHT NOW.**
    - ❌ **DO NOT use terminal output to determine coverage.** The terminal shows jasmine pass/fail, NOT line-level lcov data.
    - ❌ **DO NOT skip this step or assume coverage percentages from the terminal.**
-   - Call: #analyze-apigee-report — it reads the generated \`lcov.info\` file, which is the ONLY valid source of coverage truth.
+   - Call: #analyzeJasmineTestReport — it reads the generated \`lcov.info\` file, which is the ONLY valid source of coverage truth.
 
 **3. IDENTIFY ALL FILES WITH <100% COVERAGE:**
-   - Parse the lcov data returned by #analyze-apigee-report to list **ALL** JavaScript files.
+   - Parse the lcov data returned by #analyzeJasmineTestReport to list **ALL** JavaScript files.
    - For each file, calculate coverage percentages (lines, functions, branches).
    - **Make a list** of all files that are **below 100%** in any metric.
 
@@ -87,10 +87,10 @@ apiproxy/
 
 **5. RE-RUN COVERAGE:**
    Same command as step 1: \`& ${effectiveCommand}\`
-   ⚠️ Again: DO NOT read terminal output — call #analyze-apigee-report immediately after.
+   ⚠️ Again: DO NOT read terminal output — call #analyzeJasmineTestReport immediately after.
 
-**6. CALL #analyze-apigee-report AGAIN:**
-   - ✅ Call #analyze-apigee-report to read the updated lcov.info.
+**6. CALL #analyzeJasmineTestReport AGAIN:**
+   - ✅ Call #analyzeJasmineTestReport to read the updated lcov.info.
    - ❌ Do NOT rely on terminal output to judge coverage progress.
 
 **7. CHECK PROGRESS:**
@@ -105,22 +105,22 @@ apiproxy/
 
 **STRICT RULES:**
 ✅ DO: Work on **ALL** files that need improvement.
-✅ DO: Analyze the full coverage report from #analyze-apigee-report.
+✅ DO: Analyze the full coverage report from #analyzeJasmineTestReport.
 ✅ DO: Modify **multiple** Spec.js files as needed.
 ✅ DO: Follow {javascript_name}Spec.js naming pattern.
 ✅ DO: Execute the command using the proper syntax for the user's OS (PowerShell for Windows, Bash for Linux).
-✅ DO: ALWAYS call #analyze-apigee-report immediately after every coverage command run.
+✅ DO: ALWAYS call #analyzeJasmineTestReport immediately after every coverage command run.
 ❌ DON'T: Modify .js source files.
 ❌ DON'T: Stop until **all** files reach 100% coverage.
 ❌ DON'T: Use terminal/console output to determine coverage — it only shows jasmine pass/fail, NOT lcov line data.
-❌ DON'T: Skip calling #analyze-apigee-report under any circumstances.`
+❌ DON'T: Skip calling #analyzeJasmineTestReport under any circumstances.`
         }]
       };
     }
   );
 
-  // ── Prompt: AlljavascriptFile ──────────────────────────────────────────────
-  server.registerPrompt("AlljavascriptFile",
+  // ── Prompt: AllSpecWorkFlow ──────────────────────────────────────────────
+  server.registerPrompt("AllSpecWorkFlow",
     {
       description: "Generate and analyze code coverage report for ALL JavaScript files (global 100% coverage)",
       argsSchema: {
@@ -146,7 +146,7 @@ ${providedCommand
 
 **STEP 1: AUTO-DISCOVER RESOURCES DIRECTORY**
 
-Run this tool: #auto-discover-resources
+Run this tool: #findResourcesDirectoryPath
 
 This tool will:
 1. Search for a directory containing both "jsc" and "spec" subdirectories.
@@ -155,33 +155,33 @@ This tool will:
 
 **STEP 2: NAVIGATE TO DISCOVERED DIRECTORY**
 
-After running #auto-discover-resources, you'll get a command like:
+After running #findResourcesDirectoryPath, you'll get a command like:
 \`cd "C:\\\\path\\\\to\\\\your\\\\apiproxy\\\\resources"\`
 
 Run that EXACT command using #runInTerminal.
 
 **STEP 3: GET GLOBAL WORKFLOW INSTRUCTIONS**
 
-Now call this tool to get complete instructions for the **global** workflow: #all-get-apigee-workflow-instructions. Pass the coverage command to it if it requires one.
+Now call this tool to get complete instructions for the **global** workflow: #getAllSpecWorkflowInstruction. Pass the coverage command to it if it requires one.
 
 **STEP 4: EXECUTE THE GLOBAL WORKFLOW**
 
-Follow the instructions from #all-get-apigee-workflow-instructions exactly.
+Follow the instructions from #getAllSpecWorkflowInstruction exactly.
 
 **Global Iteration Loop:**
 
 1. Run the coverage command (using the exact command established in Step 0)
-2. ⚠️ **IMMEDIATELY after running the command — call #analyze-apigee-report**
+2. ⚠️ **IMMEDIATELY after running the command — call #analyzeJasmineTestReport**
    - ❌ **DO NOT read or interpret the terminal output as coverage data**
    - ❌ **The terminal shows jasmine test results, NOT lcov coverage data — ignore it completely**
-   - ✅ **Call #analyze-apigee-report tool right now — this is mandatory, no exceptions**
-3. **Identify ALL JavaScript files with <100% coverage** from the lcov data returned by #analyze-apigee-report.
+   - ✅ **Call #analyzeJasmineTestReport tool right now — this is mandatory, no exceptions**
+3. **Identify ALL JavaScript files with <100% coverage** from the lcov data returned by #analyzeJasmineTestReport.
 4. For **each** uncovered file:
    - Find the corresponding Spec.js file in resources/spec/.
    - Add test cases to cover the missing lines/functions/branches.
    - **Modify all uncovered Spec.js files in this iteration.**
 5. Re-run coverage command (same as step 1).
-6. ✅ Call #analyze-apigee-report again to read the updated lcov.info.
+6. ✅ Call #analyzeJasmineTestReport again to read the updated lcov.info.
    ❌ Do NOT use the terminal output to assess whether coverage improved.
 7. **Check if ALL files are now at 100%:**
    - If yes → Provide final summary and STOP.
@@ -196,12 +196,12 @@ Follow the instructions from #all-get-apigee-workflow-instructions exactly.
 **CRITICAL RULES:**
 - ✅ Work on **ALL** uncovered files in each iteration.
 - ✅ Modify **multiple** Spec.js files as needed.
-- ✅ Call #analyze-apigee-report **immediately** after every coverage command run.
+- ✅ Call #analyzeJasmineTestReport **immediately** after every coverage command run.
 - ❌ Never modify .js source files.
 - ❌ Never stop until **all** files are at 100%.
-- ❌ Never use terminal output for coverage data — always call #analyze-apigee-report.
+- ❌ Never use terminal output for coverage data — always call #analyzeJasmineTestReport.
 
-**START BY RUNNING STEP 1: #auto-discover-resources**`
+**START BY RUNNING STEP 1: #findResourcesDirectoryPath**`
           }
         }]
       };

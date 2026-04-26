@@ -26,7 +26,7 @@ src/
 └── workflows/
     ├── currentFile.ts         ← Workflow 1: Single Spec.js file (coverage-driven)
     ├── allFiles.ts            ← Workflow 2: All Spec.js files (global coverage-driven)
-    └── customFile.ts          ← Workflow 3: Custom test data from TestData/
+    └── customFile.ts          ← Workflow 3: Custom test data from TestCases/
 ```
 
 Each workflow file exports a single `register*(server: McpServer): void` function. The `McpServer` instance is created once in `server.ts` and passed in — zero global state, zero coupling between modules.
@@ -44,27 +44,27 @@ This MCP server manages another AI's behavior by feeding it highly restrictive, 
 
 ### The Prompts (Slash Commands)
 The entry points are the Prompts registered across the workflow modules:
-1. **`/CurrentjavascriptFile`** (`src/workflows/currentFile.ts`): A single-file workflow. It forces the AI to filter its focus entirely to whatever `Spec.js` file the user currently has open and loops code coverage until 100%.
-2. **`/AlljavascriptFile`** (`src/workflows/allFiles.ts`): A global workflow. It forces the AI to iterate over the entire project's coverage report and fix multiple files at once.
-3. **`/CustomjavascriptFile`** (`src/workflows/customFile.ts`): A manual input workflow. It forces the AI to read specific test case requirements from `TestData/{name}Input.txt` and generate tests for the open `Spec.js` file, completely bypassing code coverage execution.
+1. **`/CurrentSpecWorkFlow`** (`src/workflows/currentFile.ts`): A single-file workflow. It forces the AI to filter its focus entirely to whatever `Spec.js` file the user currently has open and loops code coverage until 100%.
+2. **`/AllSpecWorkFlow`** (`src/workflows/allFiles.ts`): A global workflow. It forces the AI to iterate over the entire project's coverage report and fix multiple files at once.
+3. **`/CustomSpecWorkFlow`** (`src/workflows/customFile.ts`): A manual input workflow. It forces the AI to read specific test case requirements from `TestCases/{name}Test.txt` and generate tests for the open `Spec.js` file, completely bypassing code coverage execution.
 
 ### The Tools
 Instead of making external API calls, these tools interact with the local file system and provide "Guardrails". They live in two places:
 
 **`src/tools/shared.ts`** (used by all workflows):
-- **`auto-discover-resources`**: Recursively searches the filesystem to find the Apigee `resources/` folder (which strictly contains `jsc/` and `spec/`). This avoids forcing the user to navigate the terminal manually.
-- **`analyze-apigee-report`**: Reads the `lcov.info` file and feeds it to the AI. This is the **only valid source of coverage truth** — the AI is instructed never to use terminal output for coverage data.
+- **`findResourcesDirectoryPath`**: Recursively searches the filesystem to find the Apigee `resources/` folder (which strictly contains `jsc/` and `spec/`). This avoids forcing the user to navigate the terminal manually.
+- **`analyzeJasmineTestReport`**: Reads the `lcov.info` file and feeds it to the AI. This is the **only valid source of coverage truth** — the AI is instructed never to use terminal output for coverage data.
 - **`findResourcesPathFromCurrentDir()`**: Exported helper function used internally by `read-custom-test-data`.
 
 **`src/workflows/currentFile.ts`**:
-- **`get-apigee-workflow-instructions`**: Returns strict operational rules for the single-file workflow (including mandatory `#analyze-apigee-report` enforcement).
+- **`getCurrentSpecWorkFlowInstruction`**: Returns strict operational rules for the single-file workflow (including mandatory `#analyzeJasmineTestReport` enforcement).
 
 **`src/workflows/allFiles.ts`**:
-- **`all-get-apigee-workflow-instructions`**: Returns strict operational rules for the global workflow (including mandatory `#analyze-apigee-report` enforcement).
+- **`getAllSpecWorkflowInstruction`**: Returns strict operational rules for the global workflow (including mandatory `#analyzeJasmineTestReport` enforcement).
 
 **`src/workflows/customFile.ts`**:
-- **`read-custom-test-data`**: Reads the user-provided manual test cases from the `TestData` directory.
-- **`custom-get-apigee-workflow-instructions`**: Returns operational rules for the Custom Input workflow.
+- **`read-custom-test-data`**: Reads the user-provided manual test cases from the `TestCases` directory.
+- **`getCustomSpecWorkFlowInstruction`**: Returns operational rules for the Custom Input workflow.
 
 ---
 
@@ -81,18 +81,18 @@ If the user doesn't provide the command in the slash command, the AI is fed a **
 Additionally, if the AI attempts to call the workflow instructions tool *without* the command, the tool will return a hard `❌ ERROR` text block forcing the AI to stop. **Do not revert this to standard elicitation.**
 
 ### 2. Terminal Output vs. lcov.info (Critical Guardrail)
-**The Problem:** After running the jasmine coverage command, the terminal shows test pass/fail results. The AI was prone to reading this terminal output and using it as coverage data instead of calling `#analyze-apigee-report`.
+**The Problem:** After running the jasmine coverage command, the terminal shows test pass/fail results. The AI was prone to reading this terminal output and using it as coverage data instead of calling `#analyzeJasmineTestReport`.
 **The Solution (Current Architecture):**
 Every workflow instruction string now contains explicit, multi-layered rules:
 - `⚠️ DO NOT read or parse the terminal output for coverage data.`
-- `✅ YOU MUST call #analyze-apigee-report RIGHT NOW — MANDATORY, NO EXCEPTIONS.`
+- `✅ YOU MUST call #analyzeJasmineTestReport RIGHT NOW — MANDATORY, NO EXCEPTIONS.`
 - `❌ DON'T: Use terminal/console output to determine coverage — it only shows jasmine pass/fail, NOT lcov line data.`
 
-**Do not remove or weaken these rules.** If you add new workflow steps that involve running the coverage command, always follow with the same explicit `#analyze-apigee-report` enforcement pattern.
+**Do not remove or weaken these rules.** If you add new workflow steps that involve running the coverage command, always follow with the same explicit `#analyzeJasmineTestReport` enforcement pattern.
 
 ### 3. OS-Aware Execution
 The server is explicitly designed to handle both **Windows** and **Linux/Mac** flawlessly, but prioritizes Windows.
-- **Path Escaping:** In `auto-discover-resources` (`src/tools/shared.ts`), you will see `process.platform === 'win32'` checks. Backslashes are only double-escaped `\\` on Windows so PowerShell doesn't choke. Do not break Linux by escaping forward slashes `/`.
+- **Path Escaping:** In `findResourcesDirectoryPath` (`src/tools/shared.ts`), you will see `process.platform === 'win32'` checks. Backslashes are only double-escaped `\\` on Windows so PowerShell doesn't choke. Do not break Linux by escaping forward slashes `/`.
 - **Command Syntax:** The AI is dynamically instructed to use `& {command}` for Windows PowerShell, but just `{command}` for Bash.
 
 ### 4. Build Process & Dev Dependencies
@@ -110,7 +110,7 @@ The server is explicitly designed to handle both **Windows** and **Linux/Mac** f
 If the user asks you to add a new feature (e.g., adding TypeScript support for the generated test files, or supporting a new framework):
 1. Identify which workflow file to modify: `src/workflows/currentFile.ts`, `allFiles.ts`, or `customFile.ts`. For shared utilities, use `src/tools/shared.ts`.
 2. If creating a brand-new workflow, create a new file in `src/workflows/`, export a `register*(server: McpServer): void` function, and import + call it in `src/server.ts`.
-3. Keep the strict "AI Rules" strings intact, or update them explicitly if the behavior needs to change. Pay special attention to the `#analyze-apigee-report` enforcement blocks — never remove them.
+3. Keep the strict "AI Rules" strings intact, or update them explicitly if the behavior needs to change. Pay special attention to the `#analyzeJasmineTestReport` enforcement blocks — never remove them.
 4. Run `npm run server:build` to compile.
 5. Verify the `build/` and `global/` directories remain in `.gitignore`.
 

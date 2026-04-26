@@ -39,8 +39,8 @@ export function findResourcesPathFromCurrentDir(): string | null {
 // ---------------------------------------------------------------------------
 export function registerSharedTools(server: McpServer): void {
 
-  // ── Tool: analyze-apigee-report ──────────────────────────────────────────
-  server.registerTool("analyze-apigee-report",
+  // ── Tool: analyzeJasmineTestReport ──────────────────────────────────────────
+  server.registerTool("analyzeJasmineTestReport",
     {
       title: "Read Apigee Coverage Report",
       description: "Read lcov.info coverage report file and return its content for analysis",
@@ -58,7 +58,7 @@ export function registerSharedTools(server: McpServer): void {
             return {
               content: [{
                 type: "text",
-                text: `❌ Could not find resources directory automatically.\n\n**Please:**\n1. Run #auto-discover-resources first to get your resources path\n2. Then run this tool with the path: #analyze-apigee-report resourcesPath="your\\\\path\\\\here"\n\n**Or:** Provide the path manually to this tool.`
+                text: `❌ Could not find resources directory automatically.\n\n**Please:**\n1. Run #findResourcesDirectoryPath first to get your resources path\n2. Then run this tool with the path: #analyzeJasmineTestReport resourcesPath="your\\\\path\\\\here"\n\n**Or:** Provide the path manually to this tool.`
               }]
             };
           }
@@ -81,7 +81,7 @@ export function registerSharedTools(server: McpServer): void {
         return {
           content: [{
             type: "text",
-            text: `**Coverage Report Content (lcov.info)**\n\n**File Path:** ${coveragePath}\n**Resources Directory:** ${resourcesPath}\n**File Size:** ${fileContent.length} characters\n**Lines:** ${fileContent.split('\\n').length}\n\n\`\`\`\n${fileContent}\n\`\`\`\n\n**Analyze this lcov report to:**\n1. Calculate code coverage percentages (lines, functions, branches)\n2. Identify uncovered lines, functions, and branches\n3. Determine which JavaScript file needs test improvements\n4. Suggest specific test cases to add to the corresponding Spec.js file\n5. Track progress towards 100% coverage`
+            text: `**Coverage Report Content (lcov.info)**\n\n**File Path:** ${coveragePath}\n**Resources Directory:** ${resourcesPath}\n**File Size:** ${fileContent.length} characters\n**Lines:** ${fileContent.split('\n').length}\n\n\`\`\`\n${fileContent}\n\`\`\`\n\n**Analyze this lcov report to:**\n1. Calculate code coverage percentages (lines, functions, branches)\n2. Identify uncovered lines, functions, and branches\n3. Determine which JavaScript file needs test improvements\n4. Suggest specific test cases to add to the corresponding Spec.js file\n5. Track progress towards 100% coverage`
           }]
         };
 
@@ -97,8 +97,8 @@ export function registerSharedTools(server: McpServer): void {
     }
   );
 
-  // ── Tool: auto-discover-resources ────────────────────────────────────────
-  server.registerTool("auto-discover-resources",
+  // ── Tool: findResourcesDirectoryPath ────────────────────────────────────────
+  server.registerTool("findResourcesDirectoryPath",
     {
       title: "Auto Discover Resources Directory",
       description: "Automatically find Apigee resources directory",
