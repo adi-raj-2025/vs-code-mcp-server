@@ -7,7 +7,7 @@
 				"run",
 				"server:dev"
 			],
-			"cwd": "D:\\AI\\feature-apigee-jest-v3\\vs-code-mcp-server"
+			"cwd": "D:\\AI\\apigee-jest\\vs-code-mcp-server"
 		}
 	},
 	"inputs": []
